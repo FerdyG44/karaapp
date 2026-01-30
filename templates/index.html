@@ -1,1 +1,56 @@
-<h1>GELDI MI?</h1>
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>KaraApp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:Arial,sans-serif;padding:30px;background:#fff;color:#000}
+    input,button{padding:10px;margin:6px 0;width:260px;display:block}
+    table{border-collapse:collapse;margin-top:16px}
+    th,td{border:1px solid #ccc;padding:8px 12px}
+  </style>
+</head>
+<body>
+  <h1>KaraApp</h1>
+  <p>Günlük satış ve gider gir, kârını anında gör.</p>
+
+  <form method="post">
+    <input type="date" name="day">
+    <input type="number" step="0.01" name="sales" placeholder="Günlük satış" required>
+    <input type="number" step="0.01" name="expense" placeholder="Günlük gider" required>
+    <button type="submit">Kaydet</button>
+  </form>
+
+  <h3>Özet</h3>
+  <ul>
+    <li>Toplam satış: {{ total_sales }}</li>
+    <li>Toplam gider: {{ total_expense }}</li>
+    <li>Toplam kâr: {{ total_profit }}</li>
+  </ul>
+
+  <h3>Kayıtlar</h3>
+  {% if records %}
+  <table>
+    <tr>
+      <th>Tarih</th><th>Satış</th><th>Gider</th><th>Kâr</th><th></th>
+    </tr>
+    {% for r in records %}
+    <tr>
+      <td>{{ r.day }}</td>
+      <td>{{ r.sales }}</td>
+      <td>{{ r.expense }}</td>
+      <td>{{ r.profit }}</td>
+      <td>
+        <form method="post" action="/delete/{{ r.id }}">
+          <button type="submit">Sil</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>Henüz kayıt yok.</p>
+  {% endif %}
+</body>
+</html>
