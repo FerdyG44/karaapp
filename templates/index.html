@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <title>{{ t.title }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     :root{
       --bg:#f6f7fb;
@@ -111,6 +115,10 @@
       background:transparent;
       color:var(--primary);
       border:1px solid rgba(37,99,235,.35);
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
     }
     .hint{
       margin-top:10px;
@@ -121,6 +129,7 @@
       margin:0;
       padding-left:18px;
     }
+
     table{
       width:100%;
       border-collapse:separate;
@@ -176,6 +185,13 @@
       gap:14px;
       align-items:end;
     }
+
+    /* Chart container */
+    .chart-wrap{
+      width:100%;
+      height:360px;
+    }
+
     @media (max-width: 860px){
       h1{ font-size:34px; }
       .grid{ grid-template-columns: 1fr; }
@@ -184,6 +200,7 @@
       .top{ flex-direction:column; }
       .lang{ justify-content:flex-start; }
       table{ display:block; overflow-x:auto; }
+      .chart-wrap{ height:320px; }
     }
   </style>
 </head>
@@ -196,7 +213,7 @@
         <p class="subtitle">{{ t.subtitle }}</p>
       </div>
 
-      <div class="lang" aria-label="{{ t.language }}">
+      <div class="lang" aria-label="{{ t.language if t.language is defined else 'Language' }}">
         <a href="/?lang=tr" class="{{ 'active' if lang=='tr' else '' }}">🇹🇷 Türkçe</a>
         <a href="/?lang=sv" class="{{ 'active' if lang=='sv' else '' }}">🇸🇪 Svenska</a>
         <a href="/?lang=en" class="{{ 'active' if lang=='en' else '' }}">🇬🇧 English</a>
@@ -269,11 +286,26 @@
           </div>
 
           <button class="btn" type="submit">{{ t.apply_filter }}</button>
-          <a class="btn secondary" href="/?lang={{ lang }}" style="text-align:center; text-decoration:none; line-height:20px; padding-top:12px;">
-            {{ t.reset }}
-          </a>
+          <a class="btn secondary" href="/?lang={{ lang }}">{{ t.reset }}</a>
         </div>
       </form>
+    </section>
+
+    <!-- CHART -->
+    <section class="card">
+      <div class="hd">
+        <h2>Grafik</h2>
+        <div class="divider"></div>
+      </div>
+
+      {% if monthly_rows and monthly_rows|length > 0 %}
+        <div class="chart-wrap">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+        <div class="hint">Aylık satış / gider / kâr karşılaştırması.</div>
+      {% else %}
+        <p style="margin:0; color:var(--muted)">{{ t.no_monthly }}</p>
+      {% endif %}
     </section>
 
     <!-- MONTHLY SUMMARY -->
@@ -282,32 +314,31 @@
         <h2>{{ t.monthly_summary }}</h2>
         <div class="divider"></div>
       </div>
-      <div class="bd">
-        {% if monthly_rows %}
-        <table>
-          <thead>
-            <tr>
-              <th style="width:160px">{{ t.month }}</th>
-              <th class="td-right">{{ t.sales }}</th>
-              <th class="td-right">{{ t.expense }}</th>
-              <th class="td-right">{{ t.profit }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for m in monthly_rows %}
-            <tr>
-              <td>{{ m["month"] }}</td>
-              <td class="td-right">{{ money(m["sales"]) }}</td>
-              <td class="td-right">{{ money(m["expense"]) }}</td>
-              <td class="td-right"><span class="pill">{{ money(m["profit"]) }}</span></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% else %}
-          <p style="margin:0; color:var(--muted)">{{ t.no_monthly }}</p>
-        {% endif %}
-      </div>
+
+      {% if monthly_rows %}
+      <table>
+        <thead>
+          <tr>
+            <th style="width:160px">{{ t.month }}</th>
+            <th class="td-right">{{ t.sales }}</th>
+            <th class="td-right">{{ t.expense }}</th>
+            <th class="td-right">{{ t.profit }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in monthly_rows %}
+          <tr>
+            <td>{{ m["month"] }}</td>
+            <td class="td-right">{{ money(m["sales"]) }}</td>
+            <td class="td-right">{{ money(m["expense"]) }}</td>
+            <td class="td-right"><span class="pill">{{ money(m["profit"]) }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p style="margin:0; color:var(--muted)">{{ t.no_monthly }}</p>
+      {% endif %}
     </section>
 
     <!-- RECORDS -->
@@ -352,5 +383,51 @@
     </section>
 
   </div>
+
+  {% if monthly_rows and monthly_rows|length > 0 %}
+  <script>
+    // monthly_rows Jinja -> JS
+    const monthlyRows = {{ monthly_rows | tojson }};
+    // Sıralama: grafikte soldan sağa eski->yeni güzel dursun diye ters çeviriyoruz
+    monthlyRows.reverse();
+
+    const labels = monthlyRows.map(x => x.month);
+    const sales = monthlyRows.map(x => Number(x.sales || 0));
+    const expense = monthlyRows.map(x => Number(x.expense || 0));
+    const profit = monthlyRows.map(x => Number(x.profit || 0));
+
+    const ctx = document.getElementById("monthlyChart");
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          { label: "{{ t.sales }}", data: sales, tension: 0.25 },
+          { label: "{{ t.expense }}", data: expense, tension: 0.25 },
+          { label: "{{ t.profit }}", data: profit, tension: 0.25 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { display: true },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const v = context.parsed.y ?? 0;
+                return context.dataset.label + ": " + v.toLocaleString();
+              }
+            }
+          }
+        },
+        scales: {
+          y: { ticks: { callback: (v) => Number(v).toLocaleString() } }
+        }
+      }
+    });
+  </script>
+  {% endif %}
 </body>
 </html>
