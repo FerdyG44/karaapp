@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="{{ lang or 'tr' }}">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ t.title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --primary:#2563eb;
+      --shadow: 0 10px 30px rgba(0,0,0,.06);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .wrap{
+      max-width:1100px;
+      margin:40px auto;
+      padding:0 18px;
+    }
+    .top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:14px;
+    }
+    h1{
+      margin:0 0 6px 0;
+      font-size:44px;
+      letter-spacing:-.02em;
+    }
+    .subtitle{
+      margin:0;
+      color:var(--muted);
+      font-size:16px;
+    }
+    .lang{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-top:10px;
+      white-space:nowrap;
+    }
+    .lang a{
+      text-decoration:none;
+      color:var(--primary);
+      font-weight:700;
+    }
+    .lang a.active{ text-decoration:underline; }
+    .card{
+      background:var(--card);
+      border:1px solid rgba(229,231,235,.9);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:20px 22px;
+      margin:18px 0;
+    }
+    .hd h2{
+      margin:0;
+      font-size:22px;
+    }
+    .divider{
+      height:1px;
+      background:var(--line);
+      margin:14px 0;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap:14px;
+      align-items:end;
+    }
+    label{
+      font-size:13px;
+      color:var(--muted);
+      display:block;
+      margin-bottom:6px;
+    }
+    input{
+      width:100%;
+      padding:12px 12px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      font-size:15px;
+      outline:none;
+      background:#fff;
+    }
+    input:focus{ border-color: rgba(37,99,235,.55); box-shadow:0 0 0 4px rgba(37,99,235,.10); }
+    .btn{
+      border:0;
+      border-radius:12px;
+      padding:12px 16px;
+      font-weight:800;
+      cursor:pointer;
+      background:var(--primary);
+      color:#fff;
+      height:44px;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.secondary{
+      background:transparent;
+      color:var(--primary);
+      border:1px solid rgba(37,99,235,.35);
+    }
+    .hint{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:13px;
+    }
+    ul{
+      margin:0;
+      padding-left:18px;
+    }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+    }
+    th, td{
+      padding:12px 12px;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+      font-size:14px;
+    }
+    th{
+      background:#f9fafb;
+      color:#111827;
+      font-weight:800;
+    }
+    tr:last-child td{ border-bottom:0; }
+    .td-right{ text-align:right; }
+    .row-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+    }
+    .pill{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      background:rgba(37,99,235,.10);
+      color:var(--primary);
+      font-weight:800;
+      font-size:12px;
+    }
+    .subchip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      color:var(--muted);
+      font-weight:700;
+      font-size:12px;
+      margin-left:10px;
+      background:#fff;
+    }
+    .filter-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap:14px;
+      align-items:end;
+    }
+    @media (max-width: 860px){
+      h1{ font-size:34px; }
+      .grid{ grid-template-columns: 1fr; }
+      .filter-grid{ grid-template-columns: 1fr; }
+      .btn{ width:100%; }
+      .top{ flex-direction:column; }
+      .lang{ justify-content:flex-start; }
+      table{ display:block; overflow-x:auto; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>{{ t.title }}</h1>
+        <p class="subtitle">{{ t.subtitle }}</p>
+      </div>
+
+      <div class="lang" aria-label="{{ t.language }}">
+        <a href="/?lang=tr" class="{{ 'active' if lang=='tr' else '' }}">🇹🇷 Türkçe</a>
+        <a href="/?lang=sv" class="{{ 'active' if lang=='sv' else '' }}">🇸🇪 Svenska</a>
+        <a href="/?lang=en" class="{{ 'active' if lang=='en' else '' }}">🇬🇧 English</a>
+      </div>
+    </div>
+
+    <!-- NEW RECORD -->
+    <section class="card">
+      <div class="hd">
+        <h2>{{ t.new_record }}</h2>
+        <div class="divider"></div>
+      </div>
+
+      <form method="post">
+        <div class="grid">
+          <div>
+            <label>{{ t.date }}</label>
+            <input type="date" name="day" required>
+          </div>
+
+          <div>
+            <label>{{ t.daily_sales }}</label>
+            <input type="number" step="0.01" name="sales" placeholder="örn: 30000" required>
+          </div>
+
+          <div>
+            <label>{{ t.daily_expense }}</label>
+            <input type="number" step="0.01" name="expense" placeholder="örn: 11000" required>
+          </div>
+
+          <button class="btn" type="submit">{{ t.save }}</button>
+        </div>
+
+        <div class="hint">{{ t.note_profit }}</div>
+      </form>
+    </section>
+
+    <!-- SUMMARY -->
+    <section class="card">
+      <div class="hd">
+        <h2>{{ t.summary }}</h2>
+        <div class="divider"></div>
+      </div>
+
+      <ul>
+        <li>{{ t.total_sales }}: <strong>{{ money(total_sales) }}</strong></li>
+        <li>{{ t.total_expense }}: <strong>{{ money(total_expense) }}</strong></li>
+        <li>{{ t.total_profit }}: <strong>{{ money(total_profit) }}</strong></li>
+      </ul>
+    </section>
+
+    <!-- FILTER -->
+    <section class="card">
+      <div class="hd">
+        <h2>{{ t.filter }} <span class="subchip">{{ t.date_range }}</span></h2>
+        <div class="divider"></div>
+      </div>
+
+      <form method="get">
+        <input type="hidden" name="lang" value="{{ lang }}">
+        <div class="filter-grid">
+          <div>
+            <label>{{ t.start }}</label>
+            <input type="date" name="start" value="{{ start or '' }}">
+          </div>
+
+          <div>
+            <label>{{ t.end }}</label>
+            <input type="date" name="end" value="{{ end or '' }}">
+          </div>
+
+          <button class="btn" type="submit">{{ t.apply_filter }}</button>
+          <a class="btn secondary" href="/?lang={{ lang }}" style="text-align:center; text-decoration:none; line-height:20px; padding-top:12px;">
+            {{ t.reset }}
+          </a>
+        </div>
+      </form>
+    </section>
+
+    <!-- MONTHLY SUMMARY -->
+    <section class="card">
+      <div class="hd">
+        <h2>{{ t.monthly_summary }}</h2>
+        <div class="divider"></div>
+      </div>
+      <div class="bd">
+        {% if monthly_rows %}
+        <table>
+          <thead>
+            <tr>
+              <th style="width:160px">{{ t.month }}</th>
+              <th class="td-right">{{ t.sales }}</th>
+              <th class="td-right">{{ t.expense }}</th>
+              <th class="td-right">{{ t.profit }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in monthly_rows %}
+            <tr>
+              <td>{{ m["month"] }}</td>
+              <td class="td-right">{{ money(m["sales"]) }}</td>
+              <td class="td-right">{{ money(m["expense"]) }}</td>
+              <td class="td-right"><span class="pill">{{ money(m["profit"]) }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <p style="margin:0; color:var(--muted)">{{ t.no_monthly }}</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- RECORDS -->
+    <section class="card">
+      <div class="hd">
+        <h2>{{ t.records }}</h2>
+        <div class="divider"></div>
+      </div>
+
+      {% if records %}
+      <table>
+        <thead>
+          <tr>
+            <th style="width:140px">{{ t.date }}</th>
+            <th class="td-right">{{ t.sales }}</th>
+            <th class="td-right">{{ t.expense }}</th>
+            <th class="td-right">{{ t.profit }}</th>
+            <th style="width:140px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td>{{ r["day"] }}</td>
+            <td class="td-right">{{ money(r["sales"]) }}</td>
+            <td class="td-right">{{ money(r["expense"]) }}</td>
+            <td class="td-right"><span class="pill">{{ money(r["profit"]) }}</span></td>
+            <td>
+              <div class="row-actions">
+                <form method="post" action="/delete/{{ r['id'] }}?lang={{ lang }}">
+                  <button class="btn secondary" type="submit">{{ t.delete }}</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p style="margin:0; color:var(--muted)">{{ t.no_records }}</p>
+      {% endif %}
+    </section>
+
+  </div>
+</body>
+</html>
