@@ -54,3 +54,15 @@
   {% endif %}
 </body>
 </html>
+
+<!-- DATE FILTER -->
+<hr>
+
+<h3>Filtre</h3>
+<form method="get">
+  <input type="date" name="start" value="{{ start or '' }}">
+  <input type="date" name="end" value="{{ end or '' }}">
+  <button type="submit">Filtrele</button>
+  <a href="/">Sıfırla</a>
+</form>
+
