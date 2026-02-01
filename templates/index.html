@@ -385,49 +385,68 @@
   </div>
 
   {% if monthly_rows and monthly_rows|length > 0 %}
-  <script>
-    // monthly_rows Jinja -> JS
-    const monthlyRows = {{ monthly_rows | tojson }};
-    // Sıralama: grafikte soldan sağa eski->yeni güzel dursun diye ters çeviriyoruz
-    monthlyRows.reverse();
+<script>
+  const monthlyRows = {{ monthly_rows | tojson }};
+  monthlyRows.reverse(); // eski->yeni
 
-    const labels = monthlyRows.map(x => x.month);
-    const sales = monthlyRows.map(x => Number(x.sales || 0));
-    const expense = monthlyRows.map(x => Number(x.expense || 0));
-    const profit = monthlyRows.map(x => Number(x.profit || 0));
+  const labels = monthlyRows.map(x => x.month);
+  const sales   = monthlyRows.map(x => Number(x.sales || 0));
+  const expense = monthlyRows.map(x => Number(x.expense || 0));
+  const profit  = monthlyRows.map(x => Number(x.profit || 0));
 
-    const ctx = document.getElementById("monthlyChart");
-    new Chart(ctx, {
-      type: "line",
-      data: {
-        labels,
-        datasets: [
-          { label: "{{ t.sales }}", data: sales, tension: 0.25 },
-          { label: "{{ t.expense }}", data: expense, tension: 0.25 },
-          { label: "{{ t.profit }}", data: profit, tension: 0.25 }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: { display: true },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                const v = context.parsed.y ?? 0;
-                return context.dataset.label + ": " + v.toLocaleString();
-              }
+  const ctx = document.getElementById("monthlyChart");
+
+  new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: "bar",
+          label: "{{ t.sales }}",
+          data: sales,
+          borderWidth: 1
+        },
+        {
+          type: "bar",
+          label: "{{ t.expense }}",
+          data: expense,
+          borderWidth: 1
+        },
+        {
+          type: "line",
+          label: "{{ t.profit }}",
+          data: profit,
+          tension: 0.25,
+          borderWidth: 3,
+          pointRadius: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: true },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const v = context.parsed.y ?? 0;
+              return context.dataset.label + ": " + v.toLocaleString();
             }
           }
-        },
-        scales: {
-          y: { ticks: { callback: (v) => Number(v).toLocaleString() } }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: (v) => Number(v).toLocaleString()
+          }
         }
       }
-    });
-  </script>
-  {% endif %}
+    }
+  });
+</script>
+{% endif %}
 </body>
 </html>
