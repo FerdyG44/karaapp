@@ -386,13 +386,19 @@
 
   {% if monthly_rows and monthly_rows|length > 0 %}
 <script>
-  const monthlyRows = {{ monthly_rows | tojson }};
-  monthlyRows.reverse(); // eski->yeni
+  // Jinja’dan para birimi
+  const currency = "{{ 'kr' if lang=='sv' else ('₺' if lang=='tr' else '$') }}";
 
-  const labels = monthlyRows.map(x => x.month);
+  const monthlyRows = {{ monthly_rows | tojson }};
+  monthlyRows.reverse(); // eski -> yeni
+
+  const labels  = monthlyRows.map(x => x.month);
   const sales   = monthlyRows.map(x => Number(x.sales || 0));
   const expense = monthlyRows.map(x => Number(x.expense || 0));
   const profit  = monthlyRows.map(x => Number(x.profit || 0));
+
+  const fmt = (v) => Math.round(Number(v || 0))
+    .toLocaleString(undefined, { maximumFractionDigits: 0 }) + " " + currency;
 
   const ctx = document.getElementById("monthlyChart");
 
@@ -400,26 +406,9 @@
     data: {
       labels,
       datasets: [
-        {
-          type: "bar",
-          label: "{{ t.sales }}",
-          data: sales,
-          borderWidth: 1
-        },
-        {
-          type: "bar",
-          label: "{{ t.expense }}",
-          data: expense,
-          borderWidth: 1
-        },
-        {
-          type: "line",
-          label: "{{ t.profit }}",
-          data: profit,
-          tension: 0.25,
-          borderWidth: 3,
-          pointRadius: 2
-        }
+        { type: "bar",  label: "{{ t.sales }}",   data: sales,   borderWidth: 1 },
+        { type: "bar",  label: "{{ t.expense }}", data: expense, borderWidth: 1 },
+        { type: "line", label: "{{ t.profit }}",  data: profit,  tension: 0.25, borderWidth: 3, pointRadius: 2 }
       ]
     },
     options: {
@@ -431,8 +420,7 @@
         tooltip: {
           callbacks: {
             label: function(context) {
-              const v = context.parsed.y ?? 0;
-              return context.dataset.label + ": " + v.toLocaleString();
+              return context.dataset.label + ": " + fmt(context.parsed.y);
             }
           }
         }
@@ -440,7 +428,7 @@
       scales: {
         y: {
           ticks: {
-            callback: (v) => Number(v).toLocaleString()
+            callback: (v) => fmt(v)
           }
         }
       }
