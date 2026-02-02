@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ t.title }}</title>
 
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -52,7 +51,23 @@
     label{display:block;font-size:13px;color:var(--muted);font-weight:800;margin:0 0 6px}
     input,button{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:15px;background:#fff}
     button{border:0;background:var(--blue);color:#fff;font-weight:900;cursor:pointer}
-    .btn-secondary{background:#fff;color:var(--blue);border:1px solid #bcd0ff}
+
+    /* ✅ Reset link button gibi */
+    .btn-link{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:100%;
+      padding:12px;
+      border-radius:12px;
+      font-size:15px;
+      font-weight:900;
+      text-decoration:none;
+      background:#fff;
+      color:var(--blue);
+      border:1px solid #bcd0ff;
+    }
+
     .hint{margin-top:10px;color:var(--muted);font-size:13px}
 
     /* Tables */
@@ -66,7 +81,7 @@
     .section-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
     .pill{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:4px 10px;border-radius:999px;background:#fff}
 
-    /* Charts: canvas görünmeme sorununu kesin çözmek için */
+    /* Charts */
     .chart-box{height:340px; position:relative;}
     .chart-box canvas{width:100% !important; height:100% !important;}
 
@@ -87,7 +102,6 @@
 
       <div class="right">
         <div class="langs">
-          <!-- ✅ Dil değiştir (session). next=request.full_path içindeki lang varsa app.py temizliyor -->
           <a href="{{ url_for('set_lang', lang_code='tr', next=request.full_path) }}">🇹🇷 {{ t.lang_tr }}</a>
           <a href="{{ url_for('set_lang', lang_code='sv', next=request.full_path) }}">🇸🇪 {{ t.lang_sv }}</a>
           <a href="{{ url_for('set_lang', lang_code='en', next=request.full_path) }}">🇬🇧 {{ t.lang_en }}</a>
@@ -164,7 +178,6 @@
       </div>
       <div class="hr"></div>
 
-      <!-- ✅ lang hidden input kaldırıldı (mobil dil kilitlenmesin) -->
       <form method="get">
         <div class="grid2">
           <div>
@@ -179,10 +192,8 @@
             <button type="submit">{{ t.apply_filter }}</button>
           </div>
           <div>
-            <!-- ✅ reset artık lang taşımıyor -->
-            <a href="{{ url_for('index') }}">
-              <button type="button" class="btn-secondary">{{ t.reset }}</button>
-            </a>
+            <!-- ✅ Mobilde bozmayan reset -->
+            <a class="btn-link" href="{{ url_for('index') }}">{{ t.reset }}</a>
           </div>
         </div>
       </form>
@@ -266,7 +277,6 @@
             <td>{{ "%.2f"|format(r.profit) }} {{ currency }}</td>
             <td>
               <div class="actions">
-                <!-- ✅ lang param kaldırıldı -->
                 <form method="post" action="{{ url_for('delete', record_id=r.id, start=start, end=end) }}">
                   <button class="danger" type="submit">{{ t.delete }}</button>
                 </form>
@@ -284,68 +294,51 @@
   </div>
 
   <script>
-    // Güvenli JSON (app.py dict list gönderiyor)
     const dailyRows = {{ (daily_rows or []) | tojson }};
     const monthlyRows = {{ (monthly_rows or []) | tojson }};
     const moneySuffix = "{{ currency }}";
 
-    // 30 Günlük Grafik
     (function(){
       const ctx = document.getElementById("dailyChart");
       if (!ctx) return;
 
-      const labels = dailyRows.map(x => x.day);
-      const sales  = dailyRows.map(x => Number(x.sales || 0));
-      const expense= dailyRows.map(x => Number(x.expense || 0));
-      const profit = dailyRows.map(x => Number(x.profit || 0));
-
       new Chart(ctx, {
         type: "line",
         data: {
-          labels,
+          labels: dailyRows.map(x => x.day),
           datasets: [
-            { label: "{{ t.sales }}", data: sales, tension: 0.25 },
-            { label: "{{ t.expense }}", data: expense, tension: 0.25 },
-            { label: "{{ t.profit }}", data: profit, tension: 0.25 }
+            { label: "{{ t.sales }}", data: dailyRows.map(x => Number(x.sales||0)), tension: 0.25 },
+            { label: "{{ t.expense }}", data: dailyRows.map(x => Number(x.expense||0)), tension: 0.25 },
+            { label: "{{ t.profit }}", data: dailyRows.map(x => Number(x.profit||0)), tension: 0.25 }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
-          scales: {
-            y: { ticks: { callback: v => `${v} ${moneySuffix}` } }
-          }
+          scales: { y: { ticks: { callback: v => `${v} ${moneySuffix}` } } }
         }
       });
     })();
 
-    // Aylık Grafik
     (function(){
       const ctx = document.getElementById("monthlyChart");
       if (!ctx) return;
 
-      const labels = monthlyRows.map(x => x.month);
-      const sales  = monthlyRows.map(x => Number(x.sales || 0));
-      const expense= monthlyRows.map(x => Number(x.expense || 0));
-      const profit = monthlyRows.map(x => Number(x.profit || 0));
-
       new Chart(ctx, {
         data: {
-          labels,
+          labels: monthlyRows.map(x => x.month),
           datasets: [
-            { type: "bar",  label: "{{ t.sales }}",   data: sales },
-            { type: "bar",  label: "{{ t.expense }}", data: expense },
-            { type: "line", label: "{{ t.profit }}",  data: profit, tension: 0.25 }
+            { type: "bar",  label: "{{ t.sales }}",   data: monthlyRows.map(x => Number(x.sales||0)) },
+            { type: "bar",  label: "{{ t.expense }}", data: monthlyRows.map(x => Number(x.expense||0)) },
+            { type: "line", label: "{{ t.profit }}",  data: monthlyRows.map(x => Number(x.profit||0)), tension: 0.25 }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
-          scales: {
-            y: { ticks: { callback: v => `${v} ${moneySuffix}` } }
-          }
+          scales: { y: { ticks: { callback: v => `${v} ${moneySuffix}` } } }
         }
       });
     })();
