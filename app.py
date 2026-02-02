@@ -1,178 +1,169 @@
-from flask import Flask, render_template, request, redirect, url_for
+import os
 import sqlite3
 from pathlib import Path
+from datetime import datetime, timedelta
 
+from flask import (
+    Flask, render_template, request,
+    redirect, url_for, flash
+)
+from flask_login import (
+    LoginManager, UserMixin,
+    login_user, login_required,
+    logout_user
+)
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# ---------------- APP ----------------
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 
 DB_PATH = Path(__file__).with_name("data.db")
 
-SUPPORTED_LANGS = ["tr", "sv", "en"]
+# ---------------- LOGIN ----------------
+login_manager = LoginManager()
+login_manager.login_view = "login"
+login_manager.init_app(app)
 
-I18N = {
-    "tr": {
-        "title": "KaraApp",
-        "subtitle": "Günlük satış ve gider gir, kârını anında gör.",
-        "new_record": "Yeni Kayıt",
-        "date": "Tarih",
-        "daily_sales": "Günlük satış",
-        "daily_expense": "Günlük gider",
-        "save": "Kaydet",
-        "note_profit": "Not: Kâr otomatik = satış - gider",
-        "summary": "Özet",
-        "total_sales": "Toplam satış",
-        "total_expense": "Toplam gider",
-        "total_profit": "Toplam kâr",
-        "filter": "Filtre",
-        "date_range": "Tarih aralığı",
-        "start": "Başlangıç",
-        "end": "Bitiş",
-        "apply_filter": "Filtrele",
-        "reset": "Sıfırla",
-        "monthly_summary": "Aylık Özet",
-        "month": "Ay",
-        "no_monthly": "Henüz aylık özet yok.",
-        "records": "Kayıtlar",
-        "no_records": "Henüz kayıt yok.",
-        "sales": "Satış",
-        "expense": "Gider",
-        "profit": "Kâr",
-        "delete": "Sil",
-        "language": "Dil",
-    },
-    "sv": {
-        "title": "KaraApp",
-        "subtitle": "Ange dagens försäljning och kostnader och se vinsten direkt.",
-        "new_record": "Ny registrering",
-        "date": "Datum",
-        "daily_sales": "Försäljning",
-        "daily_expense": "Kostnad",
-        "save": "Spara",
-        "note_profit": "Obs: Vinst = försäljning − kostnad",
-        "summary": "Sammanfattning",
-        "total_sales": "Total försäljning",
-        "total_expense": "Total kostnad",
-        "total_profit": "Total vinst",
-        "filter": "Filter",
-        "date_range": "Datumintervall",
-        "start": "Start",
-        "end": "Slut",
-        "apply_filter": "Filtrera",
-        "reset": "Återställ",
-        "monthly_summary": "Månadsöversikt",
-        "month": "Månad",
-        "no_monthly": "Ingen månadsöversikt ännu.",
-        "records": "Poster",
-        "no_records": "Inga poster ännu.",
-        "sales": "Försäljning",
-        "expense": "Kostnad",
-        "profit": "Vinst",
-        "delete": "Ta bort",
-        "language": "Språk",
-    },
-    "en": {
-        "title": "KaraApp",
-        "subtitle": "Enter daily sales and expenses and see profit instantly.",
-        "new_record": "New Record",
-        "date": "Date",
-        "daily_sales": "Daily sales",
-        "daily_expense": "Daily expense",
-        "save": "Save",
-        "note_profit": "Note: Profit = sales − expense",
-        "summary": "Summary",
-        "total_sales": "Total sales",
-        "total_expense": "Total expense",
-        "total_profit": "Total profit",
-        "filter": "Filter",
-        "date_range": "Date range",
-        "start": "Start",
-        "end": "End",
-        "apply_filter": "Filter",
-        "reset": "Reset",
-        "monthly_summary": "Monthly Summary",
-        "month": "Month",
-        "no_monthly": "No monthly summary yet.",
-        "records": "Records",
-        "no_records": "No records yet.",
-        "sales": "Sales",
-        "expense": "Expense",
-        "profit": "Profit",
-        "delete": "Delete",
-        "language": "Language",
-    },
-}
+class User(UserMixin):
+    def __init__(self, id, username, password_hash):
+        self.id = str(id)
+        self.username = username
+        self.password_hash = password_hash
 
+@login_manager.user_loader
+def load_user(user_id):
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM users WHERE id = ?",
+        (user_id,)
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    return User(row["id"], row["username"], row["password_hash"])
 
-def detect_lang():
-    """
-    Dil seçimi sırası:
-    1) ?lang=tr|sv|en
-    2) Browser Accept-Language
-    3) tr
-    """
-    q = (request.args.get("lang") or "").lower().strip()
-    if q in SUPPORTED_LANGS:
-        return q
-
-    header = (request.headers.get("Accept-Language") or "").lower()
-    for code in SUPPORTED_LANGS:
-        if header.startswith(code) or f"{code}-" in header or f"{code};" in header or f", {code}" in header:
-            return code
-
-    return "tr"
-
-
-def t_dict(lang):
-    return I18N.get(lang, I18N["tr"])
-
-
-def money(x):
-    try:
-        return f"{float(x):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    except Exception:
-        return "0,00"
-
-
+# ---------------- DB ----------------
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
-
 def init_db():
     conn = get_db()
-    conn.execute(
-        """
+
+    # records
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             day TEXT NOT NULL,
             sales REAL NOT NULL,
             expense REAL NOT NULL,
-            profit REAL
+            profit REAL NOT NULL
         )
-        """
-    )
+    """)
 
-    # migration: eski DB'de profit yoksa ekle
-    cols = [row[1] for row in conn.execute("PRAGMA table_info(records)").fetchall()]
-    if "profit" not in cols:
-        conn.execute("ALTER TABLE records ADD COLUMN profit REAL")
-        conn.execute("UPDATE records SET profit = sales - expense WHERE profit IS NULL")
+    # users
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        )
+    """)
+
+    # first admin
+    count = conn.execute(
+        "SELECT COUNT(*) FROM users"
+    ).fetchone()[0]
+
+    if count == 0:
+        conn.execute(
+            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+            ("admin", generate_password_hash("admin123"))
+        )
 
     conn.commit()
     conn.close()
 
+# ---------------- LANG ----------------
+def pick_lang():
+    return request.args.get("lang", "tr")
 
-@app.route("/", methods=["GET", "POST"])
-def index():
+I18N = {
+    "tr": {
+        "title": "KaraApp",
+        "subtitle": "Günlük satış, gider ve kâr takibi",
+        "total_sales": "Toplam Satış",
+        "total_expense": "Toplam Gider",
+        "total_profit": "Toplam Kâr",
+        "new_record": "Yeni Kayıt",
+        "date": "Tarih",
+        "sales": "Satış",
+        "expense": "Gider",
+        "save": "Kaydet",
+        "filter": "Filtre",
+        "start": "Başlangıç",
+        "end": "Bitiş",
+        "apply_filter": "Uygula",
+        "reset": "Sıfırla",
+        "daily_chart": "Günlük Grafik",
+        "monthly_summary": "Aylık Özet",
+        "records": "Kayıtlar",
+        "delete": "Sil",
+        "lang_tr": "Türkçe",
+        "lang_en": "English",
+        "lang_sv": "Svenska",
+    }
+}
+
+CURRENCY = {"tr": "₺", "en": "$", "sv": "kr"}
+
+# ---------------- LOGIN ROUTES ----------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
     init_db()
-
-    lang = detect_lang()
-    t = t_dict(lang)
+    lang = pick_lang()
+    t = I18N["tr"]
 
     if request.method == "POST":
-        day = (request.form.get("day") or "").strip()
-        sales = float(request.form.get("sales") or 0)
-        expense = float(request.form.get("expense") or 0)
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+
+        conn = get_db()
+        row = conn.execute(
+            "SELECT * FROM users WHERE username = ?",
+            (username,)
+        ).fetchone()
+        conn.close()
+
+        if row and check_password_hash(row["password_hash"], password):
+            login_user(User(row["id"], row["username"], row["password_hash"]))
+            return redirect(url_for("index", saved=1))
+        else:
+            flash("Hatalı kullanıcı adı veya şifre")
+
+    return render_template("login.html", lang=lang, t=t)
+
+@app.get("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
+
+# ---------------- MAIN ----------------
+@app.route("/", methods=["GET", "POST"])
+@login_required
+def index():
+    init_db()
+    lang = pick_lang()
+    t = I18N["tr"]
+    currency = CURRENCY["tr"]
+
+    if request.method == "POST":
+        day = request.form["day"]
+        sales = float(request.form["sales"])
+        expense = float(request.form["expense"])
         profit = sales - expense
 
         conn = get_db()
@@ -182,82 +173,38 @@ def index():
         )
         conn.commit()
         conn.close()
-
-        # Dil parametresi kaybolmasın
-        return redirect(url_for("index", lang=lang))
-
-    # Filtre (GET)
-    start = (request.args.get("start") or "").strip()
-    end = (request.args.get("end") or "").strip()
+        return redirect(url_for("index", saved=1))
 
     conn = get_db()
-    if start and end:
-        rows = conn.execute(
-            "SELECT * FROM records WHERE day BETWEEN ? AND ? ORDER BY day DESC, id DESC",
-            (start, end),
-        ).fetchall()
-    elif start:
-        rows = conn.execute(
-            "SELECT * FROM records WHERE day >= ? ORDER BY day DESC, id DESC",
-            (start,),
-        ).fetchall()
-    elif end:
-        rows = conn.execute(
-            "SELECT * FROM records WHERE day <= ? ORDER BY day DESC, id DESC",
-            (end,),
-        ).fetchall()
-    else:
-        rows = conn.execute("SELECT * FROM records ORDER BY day DESC, id DESC").fetchall()
+    rows = conn.execute(
+        "SELECT * FROM records ORDER BY day DESC"
+    ).fetchall()
     conn.close()
 
-    total_sales = sum(float(r["sales"] or 0) for r in rows)
-    total_expense = sum(float(r["expense"] or 0) for r in rows)
-    total_profit = sum(float(r["profit"] or 0) for r in rows)
+    records = [dict(r) for r in rows]
 
-    # Aylık özet (görünen/filtrelenmiş rows üzerinden)
-    monthly = {}
-    for r in rows:
-        month = (r["day"] or "")[:7]  # "YYYY-MM"
-        if not month:
-            continue
-        if month not in monthly:
-            monthly[month] = {"sales": 0.0, "expense": 0.0, "profit": 0.0}
-        monthly[month]["sales"] += float(r["sales"] or 0)
-        monthly[month]["expense"] += float(r["expense"] or 0)
-        monthly[month]["profit"] += float(r["profit"] or 0)
-
-    monthly_rows = [{"month": m, **vals} for m, vals in sorted(monthly.items(), reverse=True)]
+    total_sales = sum(r["sales"] for r in records)
+    total_expense = sum(r["expense"] for r in records)
+    total_profit = sum(r["profit"] for r in records)
 
     return render_template(
         "index.html",
         t=t,
-        lang=lang,
-        supported_langs=SUPPORTED_LANGS,
-        money=money,
-        records=rows,
-        monthly_rows=monthly_rows,
-        total_sales=total_sales,
-        total_expense=total_expense,
-        total_profit=total_profit,
-        start=start,
-        end=end,
+        currency=currency,
+        records=records,
+        total_sales=round(total_sales, 2),
+        total_expense=round(total_expense, 2),
+        total_profit=round(total_profit, 2),
     )
 
-
 @app.post("/delete/<int:record_id>")
+@login_required
 def delete(record_id):
-    init_db()
-    lang = (request.args.get("lang") or "tr").lower().strip()
-    if lang not in SUPPORTED_LANGS:
-        lang = "tr"
-
     conn = get_db()
     conn.execute("DELETE FROM records WHERE id = ?", (record_id,))
     conn.commit()
     conn.close()
-
-    return redirect(url_for("index", lang=lang))
-
+    return redirect(url_for("index"))
 
 if __name__ == "__main__":
     app.run(debug=True)

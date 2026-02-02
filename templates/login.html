@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{margin:0;font-family:system-ui;background:#f5f7fb}
+    .wrap{max-width:420px;margin:80px auto;padding:16px}
+    .card{background:#fff;border-radius:16px;padding:20px;
+      box-shadow:0 10px 22px rgba(0,0,0,.06)}
+    h1{margin:0 0 16px}
+    label{display:block;margin-top:12px;font-weight:700}
+    input{width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb}
+    button{margin-top:16px;width:100%;padding:12px;border:0;
+      border-radius:12px;background:#2563eb;color:#fff;font-weight:900}
+    .err{margin-top:10px;color:#dc2626;font-weight:700}
+    .hint{margin-top:12px;color:#6b7280;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Login</h1>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="err">{{ messages[0] }}</div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="post">
+        <label>Username</label>
+        <input name="username" required>
+
+        <label>Password</label>
+        <input name="password" type="password" required>
+
+        <button type="submit">Sign in</button>
+      </form>
+
+      <div class="hint">
+        İlk giriş: <b>admin / admin123</b>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
