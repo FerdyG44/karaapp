@@ -238,14 +238,17 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-def get_user_by_username(username):
+
+def get_user_by_username(username: str):
     conn = get_db()
-    user = conn.execute(
-        "SELECT * FROM users WHERE username = ?",
-        (username,)
-    ).fetchone()
-    conn.close()
-    return user
+    try:
+        return conn.execute(
+            "SELECT * FROM users WHERE username = ?",
+            (username,),
+        ).fetchone()
+    finally:
+        conn.close()
+
 
 def init_db():
     conn = get_db()
@@ -270,13 +273,13 @@ def init_db():
             )
         """)
 
-        # migration: profit
+        # migration: add profit if missing
         cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
         if "profit" not in cols:
             conn.execute("ALTER TABLE records ADD COLUMN profit REAL")
             conn.execute("UPDATE records SET profit = sales - expense WHERE profit IS NULL")
 
-        # migration: user_id
+        # migration: add user_id if missing
         cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
         if "user_id" not in cols:
             conn.execute("ALTER TABLE records ADD COLUMN user_id INTEGER")
@@ -284,7 +287,7 @@ def init_db():
             admin_id = admin["id"] if admin else 1
             conn.execute("UPDATE records SET user_id = ? WHERE user_id IS NULL", (admin_id,))
 
-        # default admin if none exists
+        # default admin
         exists = conn.execute("SELECT id FROM users LIMIT 1").fetchone()
         if not exists:
             conn.execute(
