@@ -304,11 +304,10 @@ def logout():
 def index():
     init_db()
 
-    lang = session.get("lang", "tr")
-
-    # filter
+    # filtre
     start = (request.args.get("start") or "").strip()
     end = (request.args.get("end") or "").strip()
+    uid = int(current_user.id)
 
     if request.method == "POST":
         day = (request.form.get("day") or "").strip()
@@ -318,51 +317,54 @@ def index():
 
         conn = get_db()
         conn.execute(
-            "INSERT INTO records (day, sales, expense, profit) VALUES (?, ?, ?, ?)",
-            (day, sales, expense, profit),
+            "INSERT INTO records (day, sales, expense, profit, user_id) VALUES (?, ?, ?, ?, ?)",
+            (day, sales, expense, profit, uid),
         )
         conn.commit()
         conn.close()
 
-        # preserve filter & language
+        # filtreyi koru
         return redirect(url_for("index", start=start, end=end))
 
-    # fetch records (filtered)
+    # kayıtları çek (kullanıcıya özel)
     conn = get_db()
     if start and end:
         rows = conn.execute(
-            "SELECT * FROM records WHERE day BETWEEN ? AND ? ORDER BY day DESC, id DESC",
-            (start, end),
+            "SELECT * FROM records WHERE user_id = ? AND day BETWEEN ? AND ? ORDER BY day DESC, id DESC",
+            (uid, start, end),
         ).fetchall()
     elif start:
         rows = conn.execute(
-            "SELECT * FROM records WHERE day >= ? ORDER BY day DESC, id DESC",
-            (start,),
+            "SELECT * FROM records WHERE user_id = ? AND day >= ? ORDER BY day DESC, id DESC",
+            (uid, start),
         ).fetchall()
     elif end:
         rows = conn.execute(
-            "SELECT * FROM records WHERE day <= ? ORDER BY day DESC, id DESC",
-            (end,),
+            "SELECT * FROM records WHERE user_id = ? AND day <= ? ORDER BY day DESC, id DESC",
+            (uid, end),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT * FROM records ORDER BY day DESC, id DESC"
+            "SELECT * FROM records WHERE user_id = ? ORDER BY day DESC, id DESC",
+            (uid,),
         ).fetchall()
 
-    # daily last 30 days (overall, not filtered) for chart
+    # 30 günlük grafik (kullanıcıya özel)
     last30 = conn.execute("""
         SELECT day,
                SUM(sales) AS sales,
                SUM(expense) AS expense,
                SUM(profit) AS profit
         FROM records
+        WHERE user_id = ?
         GROUP BY day
         ORDER BY day DESC
         LIMIT 30
-    """).fetchall()
+    """, (uid,)).fetchall()
+
     conn.close()
 
-    # convert to plain dicts (JSON-safe)
+    # JSON-safe dict list
     records = [
         {
             "id": r["id"],
@@ -374,6 +376,7 @@ def index():
         for r in rows
     ]
 
+    # chart için eski->yeni sıraya çevir
     daily_rows = [
         {
             "day": r["day"],
@@ -381,14 +384,14 @@ def index():
             "expense": float(r["expense"] or 0),
             "profit": float(r["profit"] or 0),
         }
-        for r in reversed(last30)  # old -> new
+        for r in reversed(last30)
     ]
 
     total_sales = sum(r["sales"] for r in records)
     total_expense = sum(r["expense"] for r in records)
     total_profit = sum(r["profit"] for r in records)
 
-    # monthly summary from filtered rows
+    # Aylık özet (filtrelenmiş records üzerinden)
     monthly_map = {}
     for r in records:
         month = (r["day"] or "")[:7]  # YYYY-MM
@@ -400,7 +403,7 @@ def index():
         monthly_map[month]["expense"] += r["expense"]
         monthly_map[month]["profit"] += r["profit"]
 
-    # old -> new (chart uses this order)
+    # chart/table için eski->yeni (ay sırası)
     monthly_rows = [monthly_map[m] for m in sorted(monthly_map.keys())]
 
     return render_template(
@@ -415,23 +418,22 @@ def index():
         total_profit=round(total_profit, 2),
     )
 
-
 @app.post("/delete/<int:record_id>")
 @login_required
 def delete(record_id):
     init_db()
 
-    lang = session.get("lang", "tr")
     start = (request.args.get("start") or "").strip()
     end = (request.args.get("end") or "").strip()
+    uid = int(current_user.id)
 
     conn = get_db()
-    conn.execute("DELETE FROM records WHERE id = ?", (record_id,))
+    # sadece kendi kaydını silebilir
+    conn.execute("DELETE FROM records WHERE id = ? AND user_id = ?", (record_id, uid))
     conn.commit()
     conn.close()
 
     return redirect(url_for("index", start=start, end=end))
-
 import traceback
 
 @app.errorhandler(Exception)
