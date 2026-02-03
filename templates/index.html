@@ -1,11 +1,12 @@
 <!doctype html>
 <html lang="{{ lang }}">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ t.title }}</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js (grafikler için) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
     :root{
@@ -14,248 +15,345 @@
       --text:#111827;
       --muted:#6b7280;
       --line:#e5e7eb;
-      --blue:#2563eb;
+      --brand:#2563eb;
+      --danger:#dc2626;
       --shadow:0 10px 30px rgba(0,0,0,.06);
-      --radius:16px;
+      --radius:14px;
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
-    .wrap{max-width:1120px;margin:28px auto;padding:0 18px}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .wrap{
+      max-width:1100px;
+      margin:24px auto;
+      padding:0 16px;
+    }
 
-    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px}
-    h1{margin:0;font-size:44px;letter-spacing:-0.02em}
-    .subtitle{margin-top:6px;color:var(--muted)}
-    .right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+    /* Topbar */
+    .topbar{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px 20px;
+      margin-bottom:18px;
+      display:flex;
+      gap:16px;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    h1{margin:0;font-size:22px}
+    .subtitle{color:var(--muted);margin-top:4px}
+    .welcome{
+      font-weight:800;
+      margin-bottom:6px;
+    }
+    .welcome span{color:var(--brand)}
+    .top-right{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:999px;
+      font-weight:800;
+      color:var(--text);
+      text-decoration:none;
+      cursor:pointer;
+    }
+    .chip.primary{
+      border-color:#bfdbfe;
+      color:var(--brand);
+    }
+    .chip.danger{
+      border-color:#fecaca;
+      color:var(--danger);
+    }
+    .chip.small{
+      padding:8px 10px;
+      font-size:13px;
+    }
 
-    .langs{display:flex;gap:12px;align-items:center}
-    .langs a{color:var(--blue);text-decoration:none;font-weight:700;font-size:14px}
-    .logout a{color:#111827;text-decoration:none;font-weight:700;font-size:14px}
-
-    .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 18px;margin:14px 0}
-    .card h2{margin:0 0 12px;font-size:18px}
-    .hr{height:1px;background:var(--line);margin:12px 0}
-
-    /* KPI */
-    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:14px 0}
-    .kpi-card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-    .kpi-title{font-size:13px;color:var(--muted);font-weight:800}
-    .kpi-value{font-size:28px;font-weight:900;margin-top:6px}
-    .kpi-icon{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#f1f5ff;border:1px solid #dbe7ff}
-    .pos{color:#16a34a}
-    .neg{color:#dc2626}
+    /* Cards */
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px 20px;
+      margin-bottom:18px;
+    }
 
     /* Forms */
-    form{margin:0}
-    .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 140px;gap:12px;align-items:end}
-    .grid2{display:grid;grid-template-columns:1fr 1fr 160px 140px;gap:12px;align-items:end}
-    label{display:block;font-size:13px;color:var(--muted);font-weight:800;margin:0 0 6px}
-    input,button{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font-size:15px;background:#fff}
-    button{border:0;background:var(--blue);color:#fff;font-weight:900;cursor:pointer}
-
-    /* ✅ Reset link button gibi */
-    .btn-link{
-      display:flex;
-      align-items:center;
-      justify-content:center;
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(12, 1fr);
+      gap:12px;
+    }
+    .col-12{grid-column:span 12}
+    .col-6{grid-column:span 6}
+    .col-4{grid-column:span 4}
+    .col-3{grid-column:span 3}
+    @media (max-width: 820px){
+      .col-6,.col-4,.col-3{grid-column:span 12}
+      .topbar{flex-direction:column; align-items:stretch}
+      .top-right{justify-content:flex-start}
+    }
+    label{display:block;font-weight:800;font-size:13px;color:#374151;margin:2px 0 6px}
+    input,button{
       width:100%;
       padding:12px;
       border-radius:12px;
+      border:1px solid var(--line);
       font-size:15px;
-      font-weight:900;
-      text-decoration:none;
-      background:#fff;
-      color:var(--blue);
-      border:1px solid #bcd0ff;
     }
+    button{
+      background:var(--brand);
+      color:#fff;
+      border:0;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .hint{color:var(--muted);margin-top:8px;font-size:13px}
 
-    .hint{margin-top:10px;color:var(--muted);font-size:13px}
+    /* KPI */
+    .kpi-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:14px;
+      margin-top:10px;
+    }
+    .kpi{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px 16px;
+    }
+    .kpi-title{font-size:13px;color:var(--muted);font-weight:800}
+    .kpi-val{font-size:26px;font-weight:950;margin-top:6px}
+    .pos{color:#16a34a}
+    .neg{color:#dc2626}
 
     /* Tables */
-    table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff}
-    th,td{padding:12px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
-    th{background:#f9fafb;color:#374151;font-weight:900}
-    tr:last-child td{border-bottom:0}
-    .actions{display:flex;gap:10px;justify-content:flex-end}
-    .danger{background:#fff;border:1px solid #fecaca;color:#dc2626;font-weight:900}
-
-    .section-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .pill{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:4px 10px;border-radius:999px;background:#fff}
-
-    /* Charts */
-    .chart-box{height:340px; position:relative;}
-    .chart-box canvas{width:100% !important; height:100% !important;}
-
-    @media (max-width: 880px){
-      .grid{grid-template-columns:1fr 1fr}
-      .grid2{grid-template-columns:1fr 1fr}
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+      background:#fff;
+      margin-top:12px;
     }
+    th,td{
+      padding:12px;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+      vertical-align:top;
+    }
+    th{background:#f9fafb;font-weight:900}
+    tr:last-child td{border-bottom:0}
+
+    .row-actions{display:flex;gap:10px}
+    .btn-del{
+      background:#fff;
+      border:1px solid #fecaca;
+      color:var(--danger);
+      font-weight:950;
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      width:auto;
+    }
+
+    /* Section titles */
+    .section-title{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .section-title h3{margin:0}
+    .muted{color:var(--muted)}
+    canvas{max-width:100%}
   </style>
 </head>
 
 <body>
   <div class="wrap">
+
+    <!-- TOPBAR -->
     <div class="topbar">
       <div>
+        <div class="welcome">👋 {{ t.welcome }}, <span>{{ current_user.username }}</span></div>
         <h1>{{ t.title }}</h1>
         <div class="subtitle">{{ t.subtitle }}</div>
       </div>
 
-      <div class="right">
-        <div class="langs">
-          <a href="{{ url_for('set_lang', lang_code='tr', next=request.full_path) }}">🇹🇷 {{ t.lang_tr }}</a>
-          <a href="{{ url_for('set_lang', lang_code='sv', next=request.full_path) }}">🇸🇪 {{ t.lang_sv }}</a>
-          <a href="{{ url_for('set_lang', lang_code='en', next=request.full_path) }}">🇬🇧 {{ t.lang_en }}</a>
+      <div class="top-right">
+        <!-- Dil seçici -->
+        <a class="chip small {% if lang=='tr' %}primary{% endif %}"
+           href="{{ url_for('set_lang', lang_code='tr', next=request.full_path) }}">{{ t.lang_tr }}</a>
+
+        <a class="chip small {% if lang=='sv' %}primary{% endif %}"
+           href="{{ url_for('set_lang', lang_code='sv', next=request.full_path) }}">{{ t.lang_sv }}</a>
+
+        <a class="chip small {% if lang=='en' %}primary{% endif %}"
+           href="{{ url_for('set_lang', lang_code='en', next=request.full_path) }}">{{ t.lang_en }}</a>
+
+        {% if current_user.username == "admin" %}
+          <a class="chip small" href="{{ url_for('admin_users') }}">{{ t.admin_users }}</a>
+        {% endif %}
+
+        <a class="chip danger small" href="{{ url_for('logout') }}">{{ t.logout }}</a>
+      </div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="card">
+      <div class="section-title">
+        <h3>{{ t.filter }}</h3>
+        <div class="muted">{{ t.date_range }}</div>
+      </div>
+
+      <form method="get" class="grid" style="margin-top:12px;">
+        <div class="col-4">
+          <label>{{ t.start }}</label>
+          <input type="date" name="start" value="{{ start or '' }}">
         </div>
-        <div class="logout">
-          <a href="{{ url_for('logout') }}">{{ t.logout }}</a>
+        <div class="col-4">
+          <label>{{ t.end }}</label>
+          <input type="date" name="end" value="{{ end or '' }}">
         </div>
+        <div class="col-4" style="display:flex; gap:10px; align-items:end;">
+          <button type="submit">{{ t.apply_filter }}</button>
+          <a class="chip" href="{{ url_for('index') }}">{{ t.reset }}</a>
+        </div>
+      </form>
+    </div>
+
+    <!-- NEW RECORD -->
+    <div class="card">
+      <div class="section-title">
+        <h3>{{ t.new_record }}</h3>
+        <div class="muted">{{ t.note_profit }}</div>
+      </div>
+
+      <form method="post" class="grid" style="margin-top:12px;">
+        <div class="col-3">
+          <label>{{ t.date }}</label>
+          <input type="date" name="day" required>
+        </div>
+        <div class="col-3">
+          <label>{{ t.sales }}</label>
+          <input type="number" step="0.01" name="sales" placeholder="{{ t.sales }}" required>
+        </div>
+        <div class="col-3">
+          <label>{{ t.expense }}</label>
+          <input type="number" step="0.01" name="expense" placeholder="{{ t.expense }}" required>
+        </div>
+        <div class="col-3" style="display:flex;align-items:end;">
+          <button type="submit">{{ t.save }}</button>
+        </div>
+      </form>
+
+      <div class="hint">
+        {{ t.note_profit }}
       </div>
     </div>
 
     <!-- KPI -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div>
+    <div class="card">
+      <div class="section-title">
+        <h3>KPI</h3>
+        <div class="muted">{{ start or '' }}{% if start and end %} → {% endif %}{{ end or '' }}</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi">
           <div class="kpi-title">{{ t.kpi_sales }}</div>
-          <div class="kpi-value">{{ total_sales }} {{ currency }}</div>
+          <div class="kpi-val">{{ total_sales }} {{ currency }}</div>
         </div>
-        <div class="kpi-icon">💰</div>
-      </div>
-
-      <div class="kpi-card">
-        <div>
+        <div class="kpi">
           <div class="kpi-title">{{ t.kpi_expense }}</div>
-          <div class="kpi-value">{{ total_expense }} {{ currency }}</div>
+          <div class="kpi-val">{{ total_expense }} {{ currency }}</div>
         </div>
-        <div class="kpi-icon">🧾</div>
-      </div>
-
-      <div class="kpi-card">
-        <div>
+        <div class="kpi">
           <div class="kpi-title">{{ t.kpi_profit }}</div>
-          <div class="kpi-value {% if total_profit >= 0 %}pos{% else %}neg{% endif %}">
+          <div class="kpi-val {% if total_profit >= 0 %}pos{% else %}neg{% endif %}">
             {{ total_profit }} {{ currency }}
           </div>
         </div>
-        <div class="kpi-icon">📈</div>
       </div>
     </div>
 
-    <!-- New record -->
+    <!-- 30 DAY CHART -->
     <div class="card">
       <div class="section-title">
-        <h2>{{ t.new_record }}</h2>
+        <h3>{{ t.daily_chart }}</h3>
+        <div class="muted">Sales / Expense / Profit</div>
       </div>
-      <div class="hr"></div>
 
-      <form method="post">
-        <div class="grid">
-          <div>
-            <label>{{ t.date }}</label>
-            <input type="date" name="day" value="{{ (start or '') }}">
-          </div>
-          <div>
-            <label>{{ t.sales }} ({{ currency }})</label>
-            <input type="number" step="0.01" name="sales" placeholder="0" required>
-          </div>
-          <div>
-            <label>{{ t.expense }} ({{ currency }})</label>
-            <input type="number" step="0.01" name="expense" placeholder="0" required>
-          </div>
-          <div>
-            <button type="submit">{{ t.save }}</button>
-          </div>
-        </div>
-        <div class="hint">{{ t.note_profit }}</div>
-      </form>
+      <div style="margin-top:12px;">
+        <canvas id="dailyChart" height="110"></canvas>
+      </div>
     </div>
 
-    <!-- Filter -->
+    <!-- MONTHLY SUMMARY -->
     <div class="card">
       <div class="section-title">
-        <h2>{{ t.filter }}</h2>
-        <span class="pill">{{ t.date_range }}</span>
+        <h3>{{ t.monthly }}</h3>
+        <div class="muted">{{ t.month }}</div>
       </div>
-      <div class="hr"></div>
-
-      <form method="get">
-        <div class="grid2">
-          <div>
-            <label>{{ t.start }}</label>
-            <input type="date" name="start" value="{{ start or '' }}">
-          </div>
-          <div>
-            <label>{{ t.end }}</label>
-            <input type="date" name="end" value="{{ end or '' }}">
-          </div>
-          <div>
-            <button type="submit">{{ t.apply_filter }}</button>
-          </div>
-          <div>
-            <!-- ✅ Mobilde bozmayan reset -->
-            <a class="btn-link" href="{{ url_for('index') }}">{{ t.reset }}</a>
-          </div>
-        </div>
-      </form>
-    </div>
-
-    <!-- 30-day chart -->
-    <div class="card">
-      <div class="section-title">
-        <h2>{{ t.daily_chart }}</h2>
-      </div>
-      <div class="hr"></div>
-      <div class="chart-box">
-        <canvas id="dailyChart"></canvas>
-      </div>
-      <div class="hint">{{ t.sales }} / {{ t.expense }} / {{ t.profit }} (son 30 gün).</div>
-    </div>
-
-    <!-- Monthly chart + table -->
-    <div class="card">
-      <div class="section-title">
-        <h2>{{ t.monthly }}</h2>
-      </div>
-      <div class="hr"></div>
-
-      <div class="chart-box">
-        <canvas id="monthlyChart"></canvas>
-      </div>
-
-      <div class="hr"></div>
 
       {% if monthly_rows and monthly_rows|length > 0 %}
-      <table>
-        <thead>
-          <tr>
-            <th>{{ t.month }}</th>
-            <th>{{ t.sales }}</th>
-            <th>{{ t.expense }}</th>
-            <th>{{ t.profit }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for m in monthly_rows %}
-          <tr>
-            <td>{{ m.month }}</td>
-            <td>{{ "%.2f"|format(m.sales) }} {{ currency }}</td>
-            <td>{{ "%.2f"|format(m.expense) }} {{ currency }}</td>
-            <td>{{ "%.2f"|format(m.profit) }} {{ currency }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+        <div style="margin-top:12px;">
+          <canvas id="monthlyChart" height="110"></canvas>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t.month }}</th>
+              <th>{{ t.sales }}</th>
+              <th>{{ t.expense }}</th>
+              <th>{{ t.profit }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in monthly_rows %}
+            <tr>
+              <td><strong>{{ m.month }}</strong></td>
+              <td>{{ "%.2f"|format(m.sales) }} {{ currency }}</td>
+              <td>{{ "%.2f"|format(m.expense) }} {{ currency }}</td>
+              <td>{{ "%.2f"|format(m.profit) }} {{ currency }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       {% else %}
-        <div class="hint">{{ t.no_monthly }}</div>
+        <p style="margin-top:12px;">{{ t.no_monthly }}</p>
       {% endif %}
     </div>
 
-    <!-- Records -->
+    <!-- RECORDS TABLE -->
     <div class="card">
       <div class="section-title">
-        <h2>{{ t.records }}</h2>
+        <h3>{{ t.records }}</h3>
+        <div class="muted">{{ records|length }} items</div>
       </div>
-      <div class="hr"></div>
 
       {% if records and records|length > 0 %}
       <table>
@@ -265,7 +363,7 @@
             <th>{{ t.sales }}</th>
             <th>{{ t.expense }}</th>
             <th>{{ t.profit }}</th>
-            <th style="text-align:right;"></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -274,74 +372,86 @@
             <td>{{ r.day }}</td>
             <td>{{ "%.2f"|format(r.sales) }} {{ currency }}</td>
             <td>{{ "%.2f"|format(r.expense) }} {{ currency }}</td>
-            <td>{{ "%.2f"|format(r.profit) }} {{ currency }}</td>
+            <td class="{% if r.profit >= 0 %}pos{% else %}neg{% endif %}">
+              {{ "%.2f"|format(r.profit) }} {{ currency }}
+            </td>
             <td>
-              <div class="actions">
-                <form method="post" action="{{ url_for('delete', record_id=r.id, start=start, end=end) }}">
-                  <button class="danger" type="submit">{{ t.delete }}</button>
-                </form>
-              </div>
+              <!-- Silme yapınca filtre kaybolmasın diye start/end query ekliyoruz -->
+              <form method="post"
+                    action="{{ url_for('delete', record_id=r.id, start=start or '', end=end or '') }}"
+                    onsubmit="return confirm('Delete this record?');">
+                <button class="btn-del" type="submit">{{ t.delete }}</button>
+              </form>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
       {% else %}
-        <div class="hint">{{ t.no_records }}</div>
+        <p style="margin-top:12px;">{{ t.no_records }}</p>
       {% endif %}
     </div>
 
   </div>
 
   <script>
+    // --- Data from Flask (JSON-safe lists of dicts) ---
     const dailyRows = {{ (daily_rows or []) | tojson }};
     const monthlyRows = {{ (monthly_rows or []) | tojson }};
-    const moneySuffix = "{{ currency }}";
 
-    (function(){
-      const ctx = document.getElementById("dailyChart");
-      if (!ctx) return;
+    // Daily chart (30 days)
+    const dailyLabels = dailyRows.map(x => x.day);
+    const dailySales  = dailyRows.map(x => x.sales);
+    const dailyExpense= dailyRows.map(x => x.expense);
+    const dailyProfit = dailyRows.map(x => x.profit);
 
-      new Chart(ctx, {
+    const dailyCtx = document.getElementById("dailyChart");
+    if (dailyCtx) {
+      new Chart(dailyCtx, {
         type: "line",
         data: {
-          labels: dailyRows.map(x => x.day),
+          labels: dailyLabels,
           datasets: [
-            { label: "{{ t.sales }}", data: dailyRows.map(x => Number(x.sales||0)), tension: 0.25 },
-            { label: "{{ t.expense }}", data: dailyRows.map(x => Number(x.expense||0)), tension: 0.25 },
-            { label: "{{ t.profit }}", data: dailyRows.map(x => Number(x.profit||0)), tension: 0.25 }
+            { label: "Sales", data: dailySales, tension: 0.35 },
+            { label: "Expense", data: dailyExpense, tension: 0.35 },
+            { label: "Profit", data: dailyProfit, tension: 0.35 }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
-          scales: { y: { ticks: { callback: v => `${v} ${moneySuffix}` } } }
+          scales: { y: { beginAtZero: true } }
         }
       });
-    })();
+    }
 
-    (function(){
-      const ctx = document.getElementById("monthlyChart");
-      if (!ctx) return;
+    // Monthly chart
+    const monthLabels = monthlyRows.map(x => x.month);
+    const monthSales  = monthlyRows.map(x => x.sales);
+    const monthExpense= monthlyRows.map(x => x.expense);
+    const monthProfit = monthlyRows.map(x => x.profit);
 
-      new Chart(ctx, {
+    const monthlyCtx = document.getElementById("monthlyChart");
+    if (monthlyCtx && monthLabels.length) {
+      new Chart(monthlyCtx, {
+        type: "bar",
         data: {
-          labels: monthlyRows.map(x => x.month),
+          labels: monthLabels,
           datasets: [
-            { type: "bar",  label: "{{ t.sales }}",   data: monthlyRows.map(x => Number(x.sales||0)) },
-            { type: "bar",  label: "{{ t.expense }}", data: monthlyRows.map(x => Number(x.expense||0)) },
-            { type: "line", label: "{{ t.profit }}",  data: monthlyRows.map(x => Number(x.profit||0)), tension: 0.25 }
+            { label: "Sales", data: monthSales },
+            { label: "Expense", data: monthExpense },
+            { label: "Profit", data: monthProfit }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: "index", intersect: false },
-          scales: { y: { ticks: { callback: v => `${v} ${moneySuffix}` } } }
+          scales: { y: { beginAtZero: true } }
         }
       });
-    })();
+    }
   </script>
 </body>
 </html>
