@@ -505,7 +505,45 @@ def admin_users():
     users_list = [{"id": u["id"], "username": u["username"]} for u in users]
 
     return render_template("admin_users.html", users=users_list, msg=msg, err=err)
+@app.post("/admin/users/<int:user_id>/delete")
+@login_required
+def admin_delete_user(user_id):
+    if not is_admin():
+        return "Forbidden", 403
 
+    # admin kendini silemesin
+    if int(current_user.id) == user_id:
+        return redirect(url_for("admin_users"))
+
+    conn = get_db()
+    # önce user'ın kayıtlarını sil (FK yoksa güvenli)
+    conn.execute("DELETE FROM records WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin_users"))
+
+
+@app.post("/admin/users/<int:user_id>/reset-password")
+@login_required
+def admin_reset_password(user_id):
+    if not is_admin():
+        return "Forbidden", 403
+
+    new_password = request.form.get("new_password") or ""
+    new_password = new_password.strip()
+    if len(new_password) < 4:
+        # basit kural: en az 4 karakter
+        return redirect(url_for("admin_users"))
+
+    conn = get_db()
+    conn.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (generate_password_hash(new_password), user_id),
+    )
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin_users"))
 
 if __name__ == "__main__":
     init_db()

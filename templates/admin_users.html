@@ -6,21 +6,29 @@
   <title>Admin - Users</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f5f7fb;margin:0}
-    .wrap{max-width:920px;margin:26px auto;padding:0 16px}
+    .wrap{max-width:980px;margin:26px auto;padding:0 16px}
     .card{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 10px 30px rgba(0,0,0,.06);margin:14px 0}
     h1{margin:0 0 8px}
     .muted{color:#6b7280}
     label{display:block;margin:10px 0 6px;color:#374151;font-weight:800;font-size:13px}
-    input,button{width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb;font-size:15px}
-    button{background:#2563eb;border:0;color:#fff;font-weight:900;cursor:pointer;margin-top:10px}
+    input,button{padding:12px;border-radius:12px;border:1px solid #e5e7eb;font-size:15px}
+    input{width:100%}
+    button{background:#2563eb;border:0;color:#fff;font-weight:900;cursor:pointer}
     table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden}
-    th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left}
+    th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
     th{background:#f9fafb}
     tr:last-child td{border-bottom:0}
     .msg{padding:10px 12px;border-radius:12px;background:#ecfdf5;color:#166534;font-weight:800;margin-top:10px}
     .err{padding:10px 12px;border-radius:12px;background:#fef2f2;color:#991b1b;font-weight:800;margin-top:10px}
     a{color:#2563eb;text-decoration:none;font-weight:800}
     .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+
+    .row-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn-danger{background:#fff;border:1px solid #fecaca;color:#dc2626;font-weight:900}
+    .btn-secondary{background:#fff;border:1px solid #bfdbfe;color:#2563eb;font-weight:900}
+    .small{padding:8px 10px;border-radius:10px;font-size:13px}
+    .pwbox{display:flex;gap:8px;align-items:center}
+    .pwbox input{width:180px}
   </style>
 </head>
 <body>
@@ -30,7 +38,7 @@
       <div class="top">
         <div>
           <h1>Admin Users</h1>
-          <div class="muted">Create new users and list existing ones.</div>
+          <div class="muted">Create users, reset password, delete users.</div>
         </div>
         <div>
           <a href="{{ url_for('index') }}">← Back</a>
@@ -40,35 +48,66 @@
       {% if msg %}<div class="msg">{{ msg }}</div>{% endif %}
       {% if err %}<div class="err">{{ err }}</div>{% endif %}
 
-      <form method="post">
+      <form method="post" style="margin-top:12px;">
         <label>Username</label>
         <input name="username" autocomplete="username" />
 
         <label>Password</label>
         <input name="password" type="password" autocomplete="new-password" />
 
-        <button type="submit">Create User</button>
+        <div style="margin-top:12px;">
+          <button type="submit">Create User</button>
+        </div>
       </form>
     </div>
 
     <div class="card">
       <h2 style="margin:0 0 10px;">Users</h2>
+
       <table>
         <thead>
           <tr>
-            <th>ID</th>
+            <th style="width:70px;">ID</th>
             <th>Username</th>
+            <th style="width:420px;">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for u in users %}
           <tr>
             <td>{{ u.id }}</td>
-            <td>{{ u.username }}</td>
+            <td>
+              <strong>{{ u.username }}</strong>
+              {% if u.username == "admin" %}
+                <div class="muted" style="font-size:12px;margin-top:4px;">(cannot delete)</div>
+              {% endif %}
+            </td>
+            <td>
+              <div class="row-actions">
+
+                <!-- Reset password -->
+                <form method="post" action="{{ url_for('admin_reset_password', user_id=u.id) }}">
+                  <div class="pwbox">
+                    <input class="small" name="new_password" type="text" placeholder="new password" />
+                    <button class="small btn-secondary" type="submit">Reset</button>
+                  </div>
+                </form>
+
+                <!-- Delete user -->
+                {% if u.username != "admin" %}
+                <form method="post" action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                      onsubmit="return confirm('Delete this user and all their records?');">
+                  <button class="small btn-danger" type="submit">Delete</button>
+                </form>
+                {% endif %}
+
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+
     </div>
 
   </div>
