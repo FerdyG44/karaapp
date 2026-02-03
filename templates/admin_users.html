@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin - Users</title>
+  <title>{{ t.admin_panel_title }}</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f5f7fb;margin:0}
     .wrap{max-width:980px;margin:26px auto;padding:0 16px}
@@ -22,7 +22,6 @@
     .err{padding:10px 12px;border-radius:12px;background:#fef2f2;color:#991b1b;font-weight:800;margin-top:10px}
     a{color:#2563eb;text-decoration:none;font-weight:800}
     .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-
     .row-actions{display:flex;gap:10px;flex-wrap:wrap}
     .btn-danger{background:#fff;border:1px solid #fecaca;color:#dc2626;font-weight:900}
     .btn-secondary{background:#fff;border:1px solid #bfdbfe;color:#2563eb;font-weight:900}
@@ -37,11 +36,11 @@
     <div class="card">
       <div class="top">
         <div>
-          <h1>Admin Users</h1>
-          <div class="muted">Create users, reset password, delete users.</div>
+          <h1>{{ t.admin_panel_title }}</h1>
+          <div class="muted">{{ t.admin_panel_subtitle }}</div>
         </div>
         <div>
-          <a href="{{ url_for('index') }}">← Back</a>
+          <a href="{{ url_for('index') }}">← {{ t.back }}</a>
         </div>
       </div>
 
@@ -49,27 +48,27 @@
       {% if err %}<div class="err">{{ err }}</div>{% endif %}
 
       <form method="post" style="margin-top:12px;">
-        <label>Username</label>
+        <label>{{ t.username }}</label>
         <input name="username" autocomplete="username" />
 
-        <label>Password</label>
+        <label>{{ t.password }}</label>
         <input name="password" type="password" autocomplete="new-password" />
 
         <div style="margin-top:12px;">
-          <button type="submit">Create User</button>
+          <button type="submit">{{ t.create_user }}</button>
         </div>
       </form>
     </div>
 
     <div class="card">
-      <h2 style="margin:0 0 10px;">Users</h2>
+      <h2 style="margin:0 0 10px;">{{ t.users }}</h2>
 
       <table>
         <thead>
           <tr>
             <th style="width:70px;">ID</th>
-            <th>Username</th>
-            <th style="width:420px;">Actions</th>
+            <th>{{ t.username }}</th>
+            <th style="width:420px;">{{ t.actions }}</th>
           </tr>
         </thead>
         <tbody>
@@ -79,7 +78,7 @@
             <td>
               <strong>{{ u.username }}</strong>
               {% if u.username == "admin" %}
-                <div class="muted" style="font-size:12px;margin-top:4px;">(cannot delete)</div>
+                <div class="muted" style="font-size:12px;margin-top:4px;">({{ t.cannot_delete_admin }})</div>
               {% endif %}
             </td>
             <td>
@@ -88,16 +87,17 @@
                 <!-- Reset password -->
                 <form method="post" action="{{ url_for('admin_reset_password', user_id=u.id) }}">
                   <div class="pwbox">
-                    <input class="small" name="new_password" type="text" placeholder="new password" />
-                    <button class="small btn-secondary" type="submit">Reset</button>
+                    <input class="small" name="new_password" type="text" placeholder="{{ t.new_password }}" />
+                    <button class="small btn-secondary" type="submit">{{ t.reset }}</button>
                   </div>
                 </form>
 
                 <!-- Delete user -->
                 {% if u.username != "admin" %}
-                <form method="post" action="{{ url_for('admin_delete_user', user_id=u.id) }}"
-                      onsubmit="return confirm('Delete this user and all their records?');">
-                  <button class="small btn-danger" type="submit">Delete</button>
+                <form method="post"
+                      action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                      onsubmit="return confirm('{{ t.confirm_delete_user }}');">
+                  <button class="small btn-danger" type="submit">{{ t.delete_user }}</button>
                 </form>
                 {% endif %}
 

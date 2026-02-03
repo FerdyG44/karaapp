@@ -66,6 +66,21 @@ I18N = {
         "login": "Giriş yap",
         "bad_login": "Kullanıcı adı veya şifre yanlış.",
         "admin_users": "Kullanıcı Yönetimi",
+        "welcome": "Hoşgeldin",
+        "admin_panel_title": "Kullanıcı Yönetimi",
+        "admin_panel_subtitle": "Kullanıcı ekle, şifre sıfırla, kullanıcı sil.",
+        "back": "Geri",
+        "create_user": "Kullanıcı Oluştur",
+        "users": "Kullanıcılar",
+        "actions": "İşlemler",
+        "new_password": "Yeni şifre",
+        "reset": "Sıfırla",
+        "delete_user": "Kullanıcıyı Sil",
+        "confirm_delete_user": "Bu kullanıcı ve tüm kayıtları silinsin mi?",
+        "username_exists": "Bu kullanıcı adı zaten var.",
+        "user_created": "Kullanıcı oluşturuldu.",
+        "need_username_password": "Kullanıcı adı ve şifre gerekli.",
+"       cannot_delete_admin": "Admin silinemez.",  
     },
     "sv": {
         "title": "KaraApp",
@@ -103,6 +118,21 @@ I18N = {
         "login": "Logga in",
         "bad_login": "Fel användarnamn eller lösenord.",
         "admin_users": "Användarhantering",
+        "welcome": "Välkommen",
+        "admin_panel_title": "Användarhantering",
+        "admin_panel_subtitle": "Skapa användare, återställ lösenord, ta bort användare.",
+        "back": "Tillbaka",
+        "create_user": "Skapa användare",
+        "users": "Användare",
+        "actions": "Åtgärder",
+        "new_password": "Nytt lösenord",
+        "reset": "Återställ",
+        "delete_user": "Ta bort användare",
+        "confirm_delete_user": "Ta bort denna användare och alla poster?",
+        "username_exists": "Användarnamnet finns redan.",
+        "user_created": "Användare skapad.",
+        "need_username_password": "Användarnamn och lösenord krävs.",
+        "cannot_delete_admin": "Admin kan inte tas bort.",      
     },
     "en": {
         "title": "KaraApp",
@@ -140,6 +170,21 @@ I18N = {
         "login": "Sign in",
         "bad_login": "Wrong username or password.",
         "admin_users": "User Management",
+        "welcome": "Welcome",
+        "admin_panel_title": "User Management",
+        "admin_panel_subtitle": "Create users, reset passwords, delete users.",
+        "back": "Back",
+        "create_user": "Create User",
+        "users": "Users",
+        "actions": "Actions",
+        "new_password": "New password",
+        "reset": "Reset",
+        "delete_user": "Delete user",
+        "confirm_delete_user": "Delete this user and all their records?",
+        "username_exists": "Username already exists.",
+        "user_created": "User created.",
+        "need_username_password": "Username and password required.",
+        "cannot_delete_admin": "Admin cannot be deleted.",
     },
 }
 
@@ -291,31 +336,31 @@ def load_user(user_id):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    init_db()
-    lang = session.get("lang", "tr")
+    lang = session.get("lang", detect_lang())
     t = I18N.get(lang, I18N["tr"])
 
     error = None
+
     if request.method == "POST":
-        username = (request.form.get("username") or "").strip()
-        password = request.form.get("password") or ""
+        username = request.form.get("username")
+        password = request.form.get("password")
 
-        conn = get_db()
-        row = conn.execute(
-            "SELECT id, username, password_hash FROM users WHERE username = ?",
-            (username,)
-        ).fetchone()
-        conn.close()
-
-        if row and check_password_hash(row["password_hash"], password):
-            login_user(User(row["id"], row["username"], row["password_hash"]))
-            next_url = request.args.get("next") or url_for("index")
-            return redirect(next_url)
+        if not username or not password:
+            error = t["need_username_password"]
         else:
-            error = t["bad_login"]
+            user = get_user_by_username(username)
+            if user and check_password_hash(user["password_hash"], password):
+                login_user(user)
+                return redirect(url_for("index"))
+            else:
+                error = t["invalid_login"]
 
-    return render_template("login.html", error=error)
-
+    return render_template(
+        "login.html",
+        lang=lang,
+        t=t,
+        error=error
+    )
 
 @app.get("/logout")
 @login_required
@@ -463,10 +508,8 @@ def delete(record_id):
 @app.route("/admin/users", methods=["GET", "POST"])
 @login_required
 def admin_users():
-    if not is_admin():
-        return "Forbidden", 403
-
-    init_db()
+    lang = session.get("lang", "tr")
+    t = I18N.get(lang, I18N["tr"])
 
     msg = None
     err = None
@@ -476,7 +519,7 @@ def admin_users():
         password = request.form.get("password") or ""
 
         if not username or not password:
-            err = "Username and password required."
+            err = t["need_username_password"]
         else:
             conn = get_db()
             exists = conn.execute(
@@ -485,14 +528,14 @@ def admin_users():
             ).fetchone()
 
             if exists:
-                err = "Username already exists."
+                err = t["username_exists"]
             else:
                 conn.execute(
                     "INSERT INTO users (username, password_hash) VALUES (?, ?)",
                     (username, generate_password_hash(password))
                 )
                 conn.commit()
-                msg = "User created."
+                msg = t["user_created"]
 
             conn.close()
 
@@ -503,8 +546,14 @@ def admin_users():
     conn.close()
 
     users_list = [{"id": u["id"], "username": u["username"]} for u in users]
-
-    return render_template("admin_users.html", users=users_list, msg=msg, err=err)
+    return render_template(
+    "admin_users.html",
+    users=users,
+    msg=msg,
+    err=err,
+    lang=lang,
+    t=t,
+)
 @app.post("/admin/users/<int:user_id>/delete")
 @login_required
 def admin_delete_user(user_id):

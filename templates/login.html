@@ -1,48 +1,126 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="{{ lang }}">
 <head>
-  <meta charset="utf-8">
-  <title>Login</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>{{ t.login_title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
-    body{margin:0;font-family:system-ui;background:#f5f7fb}
-    .wrap{max-width:420px;margin:80px auto;padding:16px}
-    .card{background:#fff;border-radius:16px;padding:20px;
-      box-shadow:0 10px 22px rgba(0,0,0,.06)}
-    h1{margin:0 0 16px}
-    label{display:block;margin-top:12px;font-weight:700}
-    input{width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb}
-    button{margin-top:16px;width:100%;padding:12px;border:0;
-      border-radius:12px;background:#2563eb;color:#fff;font-weight:900}
-    .err{margin-top:10px;color:#dc2626;font-weight:700}
-    .hint{margin-top:12px;color:#6b7280;font-size:13px}
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f4f6;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px 26px;
+      box-shadow: 0 20px 40px rgba(0,0,0,.08);
+    }
+
+    .login-card h2 {
+      margin: 0 0 18px;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      font-size: 15px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+    }
+
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1e40af;
+    }
+
+    .error {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #fee2e2;
+      color: #b91c1c;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .lang-switch {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
+      font-size: 14px;
+    }
+
+    .lang-switch a {
+      text-decoration: none;
+      font-weight: 600;
+    }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Login</h1>
 
-      {% with messages = get_flashed_messages() %}
-        {% if messages %}
-          <div class="err">{{ messages[0] }}</div>
-        {% endif %}
-      {% endwith %}
+  <div class="login-card">
+    <h2>{{ t.login_title }}</h2>
 
-      <form method="post">
-        <label>Username</label>
-        <input name="username" required>
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
 
-        <label>Password</label>
-        <input name="password" type="password" required>
+    <form method="post">
+      <label>{{ t.username }}</label>
+      <input type="text" name="username" required>
 
-        <button type="submit">Sign in</button>
-      </form>
+      <label>{{ t.password }}</label>
+      <input type="password" name="password" required>
 
-      <div class="hint">
-        İlk giriş: <b>admin / admin123</b>
-      </div>
+      <button type="submit">{{ t.sign_in }}</button>
+    </form>
+
+    <!-- Dil değiştirici -->
+    <div class="lang-switch">
+      <a href="/set-lang/tr">🇹🇷 Türkçe</a>
+      <a href="/set-lang/sv">🇸🇪 Svenska</a>
+      <a href="/set-lang/en">🇬🇧 English</a>
     </div>
   </div>
+
 </body>
 </html>
