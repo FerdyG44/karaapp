@@ -238,6 +238,14 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def get_user_by_username(username):
+    conn = get_db()
+    user = conn.execute(
+        "SELECT * FROM users WHERE username = ?",
+        (username,)
+    ).fetchone()
+    conn.close()
+    return user
 
 def init_db():
     conn = get_db()
