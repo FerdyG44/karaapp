@@ -15,9 +15,14 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
 # iOS / mobile session stability
+# iOS / mobile session stability
+# Secure cookie sadece HTTPS'te çalışır.
+# Localhost HTTP olduğu için dev ortamında False olmalı.
+is_prod = bool(os.environ.get("RENDER")) or (os.environ.get("FLASK_ENV") == "production")
+
 app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_SECURE=is_prod,
 )
 
 DB_PATH = Path(__file__).with_name("data.db")
