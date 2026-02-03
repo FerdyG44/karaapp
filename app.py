@@ -144,61 +144,52 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-
 def init_db():
     conn = get_db()
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                day TEXT NOT NULL,
+                sales REAL NOT NULL,
+                expense REAL NOT NULL,
+                profit REAL
+            )
+        """)
 
-    # records
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            day TEXT NOT NULL,
-            sales REAL NOT NULL,
-            expense REAL NOT NULL,
-            profit REAL
-        )
-    """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL
+            )
+        """)
 
-    # migration: add profit if missing
-    cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
-    if "profit" not in cols:
-        conn.execute("ALTER TABLE records ADD COLUMN profit REAL")
-        conn.execute("UPDATE records SET profit = sales - expense WHERE profit IS NULL")
-    cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
-    if "user_id" not in cols:
-        conn.execute("ALTER TABLE records ADD COLUMN user_id INTEGER")
-        # eski kayıtları admin'e bağla (ilk kullanıcı)
-        admin = conn.execute(
-            "SELECT id FROM users ORDER BY id ASC LIMIT 1"
-        ).fetchone()
-        admin_id = admin["id"] if admin else 1
-        conn.execute(
-            "UPDATE records SET user_id = ? WHERE user_id IS NULL",
-            (admin_id,)
-        )
+        # migration: add profit if missing
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
+        if "profit" not in cols:
+            conn.execute("ALTER TABLE records ADD COLUMN profit REAL")
+            conn.execute("UPDATE records SET profit = sales - expense WHERE profit IS NULL")
 
-    conn.commit()
-    conn.close()
-    # users
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL
-        )
-    """)
+        # migration: add user_id if missing
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
+        if "user_id" not in cols:
+            conn.execute("ALTER TABLE records ADD COLUMN user_id INTEGER")
+            admin = conn.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1").fetchone()
+            admin_id = admin["id"] if admin else 1
+            conn.execute("UPDATE records SET user_id = ? WHERE user_id IS NULL", (admin_id,))
 
-    # create default admin if none exists
-    exists = conn.execute("SELECT id FROM users LIMIT 1").fetchone()
-    if not exists:
-        conn.execute(
-            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-            ("admin", generate_password_hash("admin123"))
-        )
+        # create default admin if none exists
+        exists = conn.execute("SELECT id FROM users LIMIT 1").fetchone()
+        if not exists:
+            conn.execute(
+                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                ("admin", generate_password_hash("admin123"))
+            )
 
-    conn.commit()
-    conn.close()
-
+        conn.commit()
+    finally:
+        conn.close()
 
 # ---------------- Language ----------------
 def pick_lang(req) -> str:
