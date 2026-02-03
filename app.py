@@ -8,7 +8,17 @@ from flask_login import (
     LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import request
 
+def detect_lang():
+    header = request.headers.get("Accept-Language", "")
+    header = header.lower()
+
+    if header.startswith("tr"):
+        return "tr"
+    if header.startswith("sv"):
+        return "sv"
+    return "en"
 
 # ---------------- App setup ----------------
 app = Flask(__name__)
@@ -185,6 +195,31 @@ I18N = {
         "user_created": "User created.",
         "need_username_password": "Username and password required.",
         "cannot_delete_admin": "Admin cannot be deleted.",
+
+        "tr": {
+    "login_title": "Giriş",
+    "username": "Kullanıcı adı",
+    "password": "Şifre",
+    "sign_in": "Giriş yap",
+    "need_username_password": "Kullanıcı adı ve şifre gerekli",
+    "invalid_login": "Hatalı kullanıcı adı veya şifre",
+},
+"sv": {
+    "login_title": "Logga in",
+    "username": "Användarnamn",
+    "password": "Lösenord",
+    "sign_in": "Logga in",
+    "need_username_password": "Användarnamn och lösenord krävs",
+    "invalid_login": "Fel användarnamn eller lösenord",
+},
+"en": {
+    "login_title": "Login",
+    "username": "Username",
+    "password": "Password",
+    "sign_in": "Sign in",
+    "need_username_password": "Username and password required",
+    "invalid_login": "Invalid username or password",
+}
     },
 }
 
