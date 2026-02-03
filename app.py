@@ -1,7 +1,7 @@
 import os
 import sqlite3
 from pathlib import Path
-from datetime import datetime
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_login import (
@@ -13,6 +13,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # ---------------- App setup ----------------
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+
+# iOS / mobile session stability
+app.config.update(
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=True,
+)
 
 DB_PATH = Path(__file__).with_name("data.db")
 
@@ -54,6 +60,7 @@ I18N = {
         "password": "Şifre",
         "login": "Giriş yap",
         "bad_login": "Kullanıcı adı veya şifre yanlış.",
+        "admin_users": "Kullanıcı Yönetimi",
     },
     "sv": {
         "title": "KaraApp",
@@ -90,6 +97,7 @@ I18N = {
         "password": "Lösenord",
         "login": "Logga in",
         "bad_login": "Fel användarnamn eller lösenord.",
+        "admin_users": "Användarhantering",
     },
     "en": {
         "title": "KaraApp",
@@ -126,6 +134,7 @@ I18N = {
         "password": "Password",
         "login": "Sign in",
         "bad_login": "Wrong username or password.",
+        "admin_users": "User Management",
     },
 }
 
@@ -144,9 +153,11 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
     conn = get_db()
     try:
+        # records
         conn.execute("""
             CREATE TABLE IF NOT EXISTS records (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -157,6 +168,7 @@ def init_db():
             )
         """)
 
+        # users
         conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,13 +177,13 @@ def init_db():
             )
         """)
 
-        # migration: add profit if missing
+        # migration: profit
         cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
         if "profit" not in cols:
             conn.execute("ALTER TABLE records ADD COLUMN profit REAL")
             conn.execute("UPDATE records SET profit = sales - expense WHERE profit IS NULL")
 
-        # migration: add user_id if missing
+        # migration: user_id
         cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
         if "user_id" not in cols:
             conn.execute("ALTER TABLE records ADD COLUMN user_id INTEGER")
@@ -179,7 +191,7 @@ def init_db():
             admin_id = admin["id"] if admin else 1
             conn.execute("UPDATE records SET user_id = ? WHERE user_id IS NULL", (admin_id,))
 
-        # create default admin if none exists
+        # default admin if none exists
         exists = conn.execute("SELECT id FROM users LIMIT 1").fetchone()
         if not exists:
             conn.execute(
@@ -191,29 +203,25 @@ def init_db():
     finally:
         conn.close()
 
+
 # ---------------- Language ----------------
 def pick_lang(req) -> str:
-    # 1) URL ?lang=
     q = (req.args.get("lang") or "").lower().strip()
     if q in SUPPORTED_LANGS:
         return q
 
-    # 2) session (kullanıcı seçtiyse onu koru)
     s = (session.get("lang") or "").lower().strip()
     if s in SUPPORTED_LANGS:
         return s
 
-    # 3) browser Accept-Language (ilk defa seçmek için)
     best = req.accept_languages.best_match(SUPPORTED_LANGS)
     return best or "tr"
 
+
 @app.before_request
 def _ensure_lang():
-    # Kullanıcı daha önce seçtiyse EZME!
     if session.get("lang") in SUPPORTED_LANGS:
         return
-
-    # İlk defa geliyorsa otomatik seç
     session["lang"] = pick_lang(request)
 
 
@@ -233,7 +241,20 @@ def _inject_common():
 def set_lang(lang_code):
     if lang_code in SUPPORTED_LANGS:
         session["lang"] = lang_code
+        session.modified = True
+
     nxt = request.args.get("next") or url_for("index")
+
+    # remove lang from next URL (avoid locking language)
+    try:
+        u = urlparse(nxt)
+        q = parse_qs(u.query)
+        q.pop("lang", None)
+        new_query = urlencode(q, doseq=True)
+        nxt = urlunparse((u.scheme, u.netloc, u.path, u.params, new_query, u.fragment))
+    except Exception:
+        pass
+
     return redirect(nxt)
 
 
@@ -298,13 +319,16 @@ def logout():
     return redirect(url_for("login"))
 
 
+def is_admin():
+    return current_user.is_authenticated and getattr(current_user, "username", "") == "admin"
+
+
 # ---------------- Main routes ----------------
 @app.route("/", methods=["GET", "POST"])
 @login_required
 def index():
     init_db()
 
-    # filtre
     start = (request.args.get("start") or "").strip()
     end = (request.args.get("end") or "").strip()
     uid = int(current_user.id)
@@ -323,11 +347,10 @@ def index():
         conn.commit()
         conn.close()
 
-        # filtreyi koru
         return redirect(url_for("index", start=start, end=end))
 
-    # kayıtları çek (kullanıcıya özel)
     conn = get_db()
+
     if start and end:
         rows = conn.execute(
             "SELECT * FROM records WHERE user_id = ? AND day BETWEEN ? AND ? ORDER BY day DESC, id DESC",
@@ -349,7 +372,6 @@ def index():
             (uid,),
         ).fetchall()
 
-    # 30 günlük grafik (kullanıcıya özel)
     last30 = conn.execute("""
         SELECT day,
                SUM(sales) AS sales,
@@ -364,7 +386,6 @@ def index():
 
     conn.close()
 
-    # JSON-safe dict list
     records = [
         {
             "id": r["id"],
@@ -376,7 +397,6 @@ def index():
         for r in rows
     ]
 
-    # chart için eski->yeni sıraya çevir
     daily_rows = [
         {
             "day": r["day"],
@@ -391,10 +411,9 @@ def index():
     total_expense = sum(r["expense"] for r in records)
     total_profit = sum(r["profit"] for r in records)
 
-    # Aylık özet (filtrelenmiş records üzerinden)
     monthly_map = {}
     for r in records:
-        month = (r["day"] or "")[:7]  # YYYY-MM
+        month = (r["day"] or "")[:7]
         if not month:
             continue
         if month not in monthly_map:
@@ -403,7 +422,6 @@ def index():
         monthly_map[month]["expense"] += r["expense"]
         monthly_map[month]["profit"] += r["profit"]
 
-    # chart/table için eski->yeni (ay sırası)
     monthly_rows = [monthly_map[m] for m in sorted(monthly_map.keys())]
 
     return render_template(
@@ -418,6 +436,7 @@ def index():
         total_profit=round(total_profit, 2),
     )
 
+
 @app.post("/delete/<int:record_id>")
 @login_required
 def delete(record_id):
@@ -428,21 +447,61 @@ def delete(record_id):
     uid = int(current_user.id)
 
     conn = get_db()
-    # sadece kendi kaydını silebilir
     conn.execute("DELETE FROM records WHERE id = ? AND user_id = ?", (record_id, uid))
     conn.commit()
     conn.close()
 
     return redirect(url_for("index", start=start, end=end))
-import traceback
 
-@app.errorhandler(Exception)
-def handle_any_exception(e):
-    # Sadece debug modda detay bas
-    if app.debug:
-        print("🔥 ERROR:", repr(e))
-        print(traceback.format_exc())
-    return "Internal Server Error", 500 
+
+# ---------------- Admin: user management ----------------
+@app.route("/admin/users", methods=["GET", "POST"])
+@login_required
+def admin_users():
+    if not is_admin():
+        return "Forbidden", 403
+
+    init_db()
+
+    msg = None
+    err = None
+
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
+
+        if not username or not password:
+            err = "Username and password required."
+        else:
+            conn = get_db()
+            exists = conn.execute(
+                "SELECT id FROM users WHERE username = ?",
+                (username,)
+            ).fetchone()
+
+            if exists:
+                err = "Username already exists."
+            else:
+                conn.execute(
+                    "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                    (username, generate_password_hash(password))
+                )
+                conn.commit()
+                msg = "User created."
+
+            conn.close()
+
+    conn = get_db()
+    users = conn.execute(
+        "SELECT id, username FROM users ORDER BY id DESC"
+    ).fetchall()
+    conn.close()
+
+    users_list = [{"id": u["id"], "username": u["username"]} for u in users]
+
+    return render_template("admin_users.html", users=users_list, msg=msg, err=err)
+
+
 if __name__ == "__main__":
     init_db()
     app.run(debug=True)
