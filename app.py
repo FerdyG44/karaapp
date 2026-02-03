@@ -164,7 +164,21 @@ def init_db():
     if "profit" not in cols:
         conn.execute("ALTER TABLE records ADD COLUMN profit REAL")
         conn.execute("UPDATE records SET profit = sales - expense WHERE profit IS NULL")
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
+    if "user_id" not in cols:
+        conn.execute("ALTER TABLE records ADD COLUMN user_id INTEGER")
+        # eski kayıtları admin'e bağla (ilk kullanıcı)
+        admin = conn.execute(
+            "SELECT id FROM users ORDER BY id ASC LIMIT 1"
+        ).fetchone()
+        admin_id = admin["id"] if admin else 1
+        conn.execute(
+            "UPDATE records SET user_id = ? WHERE user_id IS NULL",
+            (admin_id,)
+        )
 
+    conn.commit()
+    conn.close()
     # users
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -427,15 +441,15 @@ def delete(record_id):
 
     return redirect(url_for("index", start=start, end=end))
 
-@app.get("/reset-db")
-def reset_db():
-    # DİKKAT: bütün verileri siler!
-    try:
-        DB_PATH.unlink(missing_ok=True)
-    except Exception:
-        pass
-    init_db()
-    return "DB reset OK"
+import traceback
+
+@app.errorhandler(Exception)
+def handle_any_exception(e):
+    # Sadece debug modda detay bas
+    if app.debug:
+        print("🔥 ERROR:", repr(e))
+        print(traceback.format_exc())
+    return "Internal Server Error", 500 
 if __name__ == "__main__":
     init_db()
     app.run(debug=True)
