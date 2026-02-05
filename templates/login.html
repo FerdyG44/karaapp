@@ -1,126 +1,59 @@
-<!DOCTYPE html>
-<html lang="{{ lang }}">
+<!doctype html>
+<html lang="{{ lang or 'tr' }}">
 <head>
-  <meta charset="UTF-8">
-  <title>{{ t.login_title }}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t.get("login_title","Giriş") }} — {{ t.get("title","KaraApp") }}</title>
   <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f3f4f6;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    .login-card {
-      width: 100%;
-      max-width: 380px;
-      background: #fff;
-      border-radius: 14px;
-      padding: 28px 26px;
-      box-shadow: 0 20px 40px rgba(0,0,0,.08);
-    }
-
-    .login-card h2 {
-      margin: 0 0 18px;
-      text-align: center;
-      font-size: 24px;
-    }
-
-    label {
-      display: block;
-      margin-top: 14px;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px 12px;
-      margin-top: 6px;
-      border-radius: 10px;
-      border: 1px solid #d1d5db;
-      font-size: 15px;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37,99,235,.15);
-    }
-
-    button {
-      width: 100%;
-      margin-top: 20px;
-      padding: 12px;
-      border-radius: 12px;
-      border: none;
-      background: #2563eb;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #1e40af;
-    }
-
-    .error {
-      margin-bottom: 14px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: #fee2e2;
-      color: #b91c1c;
-      font-size: 14px;
-      text-align: center;
-    }
-
-    .lang-switch {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 18px;
-      font-size: 14px;
-    }
-
-    .lang-switch a {
-      text-decoration: none;
-      font-weight: 600;
-    }
+    :root{--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--primary:#2563eb;--shadow:0 10px 30px rgba(0,0,0,.06);--radius:14px;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);}
+    .wrap{max-width:420px;margin:0 auto;padding:34px 18px;}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+    h1{margin:0 0 6px 0;font-size:28px;letter-spacing:-.3px}
+    .sub{color:var(--muted);margin:0 0 14px 0}
+    .lang{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px 0}
+    .lang a{border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:999px;font-weight:700;font-size:14px;text-decoration:none;color:inherit}
+    .lang a.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(37,99,235,.12) inset}
+    label{display:block;font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px}
+    .inp{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;outline:none;background:#fff}
+    .inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+    .row{display:grid;gap:10px;margin-top:10px}
+    .btn{width:100%;border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:12px;padding:11px 12px;font-weight:900;font-size:15px;cursor:pointer;margin-top:12px}
+    .err{margin-top:12px;padding:10px 12px;border-radius:12px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-weight:700}
   </style>
 </head>
-
 <body>
+  <div class="wrap">
+    <div class="card">
+      <h1>{{ t.get("login_title","Giriş") }}</h1>
+      <p class="sub">{{ t.get("subtitle","") }}</p>
 
-  <div class="login-card">
-    <h2>{{ t.login_title }}</h2>
+      <div class="lang">
+        <a href="{{ url_for('login', lang='tr') }}" class="{{ 'active' if lang=='tr' else '' }}">🇹🇷 Türkçe</a>
+        <a href="{{ url_for('login', lang='sv') }}" class="{{ 'active' if lang=='sv' else '' }}">🇸🇪 Svenska</a>
+        <a href="{{ url_for('login', lang='en') }}" class="{{ 'active' if lang=='en' else '' }}">🇬🇧 English</a>
+      </div>
 
-    {% if error %}
-      <div class="error">{{ error }}</div>
-    {% endif %}
+      <form method="post" action="{{ url_for('login_post', lang=lang) }}">
+        <div class="row">
+          <div>
+            <label>{{ t.get("username","Kullanıcı adı") }}</label>
+            <input class="inp" name="username" autocomplete="username" required>
+          </div>
+          <div>
+            <label>{{ t.get("password","Şifre") }}</label>
+            <input class="inp" type="password" name="password" autocomplete="current-password" required>
+          </div>
+        </div>
 
-    <form method="post">
-      <label>{{ t.username }}</label>
-      <input type="text" name="username" required>
+        <button class="btn" type="submit">{{ t.get("login","Giriş") }}</button>
 
-      <label>{{ t.password }}</label>
-      <input type="password" name="password" required>
-
-      <button type="submit">{{ t.sign_in }}</button>
-    </form>
-
-    <!-- Dil değiştirici -->
-    <div class="lang-switch">
-      <a href="/set-lang/tr">🇹🇷 Türkçe</a>
-      <a href="/set-lang/sv">🇸🇪 Svenska</a>
-      <a href="/set-lang/en">🇬🇧 English</a>
+        {% if error %}
+          <div class="err">{{ error }}</div>
+        {% endif %}
+      </form>
     </div>
   </div>
-
 </body>
 </html>

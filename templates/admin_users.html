@@ -1,115 +1,146 @@
 <!doctype html>
-<html lang="{{ lang }}">
+<html lang="{{ lang or 'tr' }}">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ t.admin_panel_title }}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t.get("admin_users","Kullanıcıları yönet") }} — {{ t.get("title","KaraApp") }}</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f5f7fb;margin:0}
-    .wrap{max-width:980px;margin:26px auto;padding:0 16px}
-    .card{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 10px 30px rgba(0,0,0,.06);margin:14px 0}
-    h1{margin:0 0 8px}
-    .muted{color:#6b7280}
-    label{display:block;margin:10px 0 6px;color:#374151;font-weight:800;font-size:13px}
-    input,button{padding:12px;border-radius:12px;border:1px solid #e5e7eb;font-size:15px}
-    input{width:100%}
-    button{background:#2563eb;border:0;color:#fff;font-weight:900;cursor:pointer}
-    table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden}
-    th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
-    th{background:#f9fafb}
-    tr:last-child td{border-bottom:0}
-    .msg{padding:10px 12px;border-radius:12px;background:#ecfdf5;color:#166534;font-weight:800;margin-top:10px}
-    .err{padding:10px 12px;border-radius:12px;background:#fef2f2;color:#991b1b;font-weight:800;margin-top:10px}
-    a{color:#2563eb;text-decoration:none;font-weight:800}
-    .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .row-actions{display:flex;gap:10px;flex-wrap:wrap}
-    .btn-danger{background:#fff;border:1px solid #fecaca;color:#dc2626;font-weight:900}
-    .btn-secondary{background:#fff;border:1px solid #bfdbfe;color:#2563eb;font-weight:900}
-    .small{padding:8px 10px;border-radius:10px;font-size:13px}
-    .pwbox{display:flex;gap:8px;align-items:center}
-    .pwbox input{width:180px}
+    :root{--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--primary:#2563eb;--danger:#ef4444;--shadow:0 10px 30px rgba(0,0,0,.06);--radius:14px;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);}
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:1000px;margin:0 auto;padding:28px 18px 60px;}
+    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    h1{margin:0;font-size:32px;letter-spacing:-.4px}
+    .sub{margin-top:6px;color:var(--muted)}
+    .btn, .btn-outline{border-radius:999px;padding:9px 14px;font-weight:900;font-size:14px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:1px solid var(--line);background:#fff}
+    .btn{border-color:var(--primary);background:var(--primary);color:#fff}
+    .btn-danger{border-color:var(--danger);background:var(--danger);color:#fff}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-top:14px;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    @media (max-width: 900px){.grid{grid-template-columns:1fr;}}
+    label{display:block;font-size:13px;color:var(--muted);font-weight:800;margin-bottom:6px}
+    .inp{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;outline:none;background:#fff}
+    .inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+    table{width:100%;border-collapse:collapse;font-size:14px;}
+    th,td{padding:10px 10px;border-top:1px solid var(--line);text-align:left}
+    th{border-top:0;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-weight:900;font-size:12px;background:#fff}
+    .pill.admin{border-color:rgba(37,99,235,.5)}
+    .pill.user{border-color:rgba(107,114,128,.5)}
+    .muted{color:var(--muted)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width: 520px){.row{grid-template-columns:1fr;}}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+    .flash{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff}
+    .flash.ok{border-color:#bbf7d0;background:#f0fdf4}
+    .flash.err{border-color:#fecaca;background:#fef2f2}
   </style>
 </head>
 <body>
   <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>{{ t.get("admin_users","Kullanıcıları yönet") }}</h1>
+        <div class="sub">{{ t.get("welcome","Hoşgeldin") }}, <strong>{{ current_user.username }}</strong></div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn-outline" href="{{ url_for('index', lang=lang) }}">← {{ t.get("title","KaraApp") }}</a>
+        <a class="btn-outline" href="{{ url_for('logout', lang=lang) }}">{{ t.get("logout","Çıkış") }}</a>
+      </div>
+    </div>
 
-    <div class="card">
-      <div class="top">
-        <div>
-          <h1>{{ t.admin_panel_title }}</h1>
-          <div class="muted">{{ t.admin_panel_subtitle }}</div>
-        </div>
-        <div>
-          <a href="{{ url_for('index') }}">← {{ t.back }}</a>
-        </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat,msg in messages %}
+          <div class="flash {{ 'ok' if cat=='ok' else 'err' }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="grid">
+      <!-- Create user -->
+      <div class="card">
+        <h3 style="margin:0 0 10px 0;">{{ t.get("create","Oluştur") }}</h3>
+        <form method="post" action="{{ url_for('admin_users_create', lang=lang) }}">
+          <div class="row">
+            <div>
+              <label>{{ t.get("username","Kullanıcı adı") }}</label>
+              <input class="inp" name="username" required>
+            </div>
+            <div>
+              <label>{{ t.get("password","Şifre") }}</label>
+              <input class="inp" type="password" name="password" required>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <label>{{ t.get("expires_days","Kaç gün geçerli? (0 = süresiz)") }}</label>
+              <input class="inp" type="number" min="0" name="days" value="0">
+              <div class="muted" style="font-size:12px; margin-top:6px;">
+                {{ t.get("expires_at","Bitiş") }} → {{ t.get("expired","Süre dolmuş kullanıcı") }}
+              </div>
+            </div>
+            <div>
+              <label>{{ t.get("is_admin","Admin mi?") }}</label>
+              <select class="inp" name="is_admin">
+                <option value="0">{{ t.get("user","Kullanıcı") }}</option>
+                <option value="1">{{ t.get("admin","Admin") }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn" type="submit">{{ t.get("create","Oluştur") }}</button>
+          </div>
+        </form>
       </div>
 
-      {% if msg %}<div class="msg">{{ msg }}</div>{% endif %}
-      {% if err %}<div class="err">{{ err }}</div>{% endif %}
-
-      <form method="post" style="margin-top:12px;">
-        <label>{{ t.username }}</label>
-        <input name="username" autocomplete="username" />
-
-        <label>{{ t.password }}</label>
-        <input name="password" type="password" autocomplete="new-password" />
-
-        <div style="margin-top:12px;">
-          <button type="submit">{{ t.create_user }}</button>
+      <!-- Users table -->
+      <div class="card">
+        <h3 style="margin:0 0 10px 0;">{{ t.get("admin_users","Kullanıcıları yönet") }}</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>{{ t.get("username","Kullanıcı adı") }}</th>
+              <th>{{ t.get("role","Rol") }}</th>
+              <th>{{ t.get("expires_at","Bitiş") }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+              <tr>
+                <td>{{ u["id"] }}</td>
+                <td><strong>{{ u["username"] }}</strong></td>
+                <td>
+                  {% if u["is_admin"] %}
+                    <span class="pill admin">{{ t.get("admin","Admin") }}</span>
+                  {% else %}
+                    <span class="pill user">{{ t.get("user","Kullanıcı") }}</span>
+                  {% endif %}
+                </td>
+                <td class="muted">{{ u["expires_at"] or "—" }}</td>
+                <td style="text-align:right;">
+                  {% if u["id"] != current_user.id %}
+                    <form method="post" action="{{ url_for('admin_users_delete', user_id=u['id'], lang=lang) }}" style="display:inline;">
+                      <button class="btn-danger" type="submit">{{ t.get("delete","Sil") }}</button>
+                    </form>
+                  {% else %}
+                    <span class="muted" style="font-size:12px;">(you)</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="muted" style="margin-top:10px; font-size:12px;">
+          {{ t.get("cannot_delete_self","Kendini silemezsin") }}
         </div>
-      </form>
+      </div>
     </div>
-
-    <div class="card">
-      <h2 style="margin:0 0 10px;">{{ t.users }}</h2>
-
-      <table>
-        <thead>
-          <tr>
-            <th style="width:70px;">ID</th>
-            <th>{{ t.username }}</th>
-            <th style="width:420px;">{{ t.actions }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for u in users %}
-          <tr>
-            <td>{{ u.id }}</td>
-            <td>
-              <strong>{{ u.username }}</strong>
-              {% if u.username == "admin" %}
-                <div class="muted" style="font-size:12px;margin-top:4px;">({{ t.cannot_delete_admin }})</div>
-              {% endif %}
-            </td>
-            <td>
-              <div class="row-actions">
-
-                <!-- Reset password -->
-                <form method="post" action="{{ url_for('admin_reset_password', user_id=u.id) }}">
-                  <div class="pwbox">
-                    <input class="small" name="new_password" type="text" placeholder="{{ t.new_password }}" />
-                    <button class="small btn-secondary" type="submit">{{ t.reset }}</button>
-                  </div>
-                </form>
-
-                <!-- Delete user -->
-                {% if u.username != "admin" %}
-                <form method="post"
-                      action="{{ url_for('admin_delete_user', user_id=u.id) }}"
-                      onsubmit="return confirm('{{ t.confirm_delete_user }}');">
-                  <button class="small btn-danger" type="submit">{{ t.delete_user }}</button>
-                </form>
-                {% endif %}
-
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-    </div>
-
   </div>
 </body>
 </html>
