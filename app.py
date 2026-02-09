@@ -394,48 +394,56 @@ _db_inited = False
 _db_lock = threading.Lock()
 
 def ensure_admin_from_env_once():
-    # Render ENV’den admin oluştur / güncelle
-    # Not: DB'de admin varsa bile, ENV'deki kullanıcı yoksa ekler.
+
     flag = os.environ.get("ADMIN_CREATE_ON_START", "").lower() == "true"
     if not flag:
         return
 
     username = (os.environ.get("ADMIN_USERNAME") or "").strip()
     password = (os.environ.get("ADMIN_PASSWORD") or "").strip()
-
+    
     if not username or not password:
         print("ADMIN env missing (ADMIN_USERNAME/ADMIN_PASSWORD)", flush=True)
         return
 
     conn = get_db()
     try:
-        # Bu username zaten var mı?
-        user = conn.execute(
-            "SELECT id, is_admin FROM users WHERE username = ? LIMIT 1",
+        # ENV admin kullanıcı var mı?
+        u = conn.execute(
+            "SELECT id FROM users WHERE username = ? LIMIT 1",
             (username,),
         ).fetchone()
 
-        if user:
-            # varsa: admin yap + şifreyi güncelle (istersen sadece admin yapabiliriz)
+        if not u:
+            # yoksa oluştur (şifreyi burada set eder)
             conn.execute(
-                "UPDATE users SET is_admin = 1, password_hash = ? WHERE id = ?",
-                (generate_password_hash(password), user["id"]),
+                "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 1)",
+                (username, generate_password_hash(password)),
             )
             conn.commit()
-            print(f"Admin updated from env: {username}", flush=True)
-            return
+            env_admin_id = conn.execute(
+                "SELECT id FROM users WHERE username = ? LIMIT 1",
+                (username,),
+            ).fetchone()["id"]
+            print(f"Admin created from env: {username}", flush=True)
+        else:
+            env_admin_id = u["id"]
+            # varsa admin yap ama şifreyi asla değiştirme
+            conn.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (env_admin_id,))
+            conn.commit()
+            print(f"Admin ensured from env (no password change): {username}", flush=True)
 
-        # yoksa: yeni admin olarak ekle
+        # diğer tüm adminleri düşür (tek admin ENV admin kalsın)
         conn.execute(
-            "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 1)",
-            (username, generate_password_hash(password)),
+            "UPDATE users SET is_admin = 0 WHERE id != ? AND is_admin = 1",
+            (env_admin_id,),
         )
         conn.commit()
-        print(f"Admin created from env: {username}", flush=True)
+        print("Other admins demoted. Only ENV admin remains.", flush=True)
 
     finally:
         conn.close()
-        
+
 def ensure_db():
     global _db_inited
     if _db_inited:
