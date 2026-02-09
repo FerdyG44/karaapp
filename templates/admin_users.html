@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ t.get("admin_users","Kullanıcıları yönet") }} — {{ t.get("title","KaraApp") }}</title>
+  
   <style>
     :root{--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--primary:#2563eb;--danger:#ef4444;--shadow:0 10px 30px rgba(0,0,0,.06);--radius:14px;}
     *{box-sizing:border-box}
@@ -62,7 +63,11 @@
       <!-- Create user -->
       <div class="card">
         <h3 style="margin:0 0 10px 0;">{{ t.get("create","Oluştur") }}</h3>
-        <form method="post" action="{{ url_for('admin_users_create', lang=lang) }}">
+        <form method="post" action="{{ url_for('admin_unlock_login', lang=lang) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="ip" value="{{ request.remote_addr }}">
+          <button type="submit" title="Unlock" style="border:none;background:none;cursor:pointer;">🔓</button>
+          </form>
           <div class="row">
             <div>
               <label>{{ t.get("username","Kullanıcı adı") }}</label>
@@ -126,8 +131,16 @@
                 <td style="text-align:right;">
                   {% if u["id"] != current_user.id %}
                     <form method="post" action="{{ url_for('admin_users_delete', user_id=u['id'], lang=lang) }}" style="display:inline;">
-                      <button class="btn-danger" type="submit">{{ t.get("delete","Sil") }}</button>
+                    <input type="hidden" name="username" value="{{ u['username'] }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn-danger" type="submit">{{ t.get("delete","Sil") }}</button>
                     </form>
+                <form method="post" action="{{ url_for('admin_unlock_login', lang=lang) }}" style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="username" value="{{ u['username'] }}">
+                  <button type="submit" title="{{ t.get('unlock','Kilidi kaldır') }}" style="border:none;background:none;cursor:pointer;">
+                  🔓</button>
+                </form>  
                   {% else %}
                     <span class="muted" style="font-size:12px;">(you)</span>
                   {% endif %}

@@ -3,10 +3,22 @@ import re
 import sqlite3
 import threading
 import time
+import csv
+
+import csv
+from io import StringIO
+from flask import Response
+
+
+from openpyxl import Workbook
+from io import BytesIO
+
 from datetime import datetime, timedelta
 from functools import wraps
 from collections import defaultdict
 
+from io import StringIO
+from flask import Response
 from flask import (
     Flask, render_template, request, redirect, url_for,
     flash, abort, session
@@ -23,11 +35,24 @@ from flask_wtf.csrf import CSRFProtect
 
 # ---------------- App ----------------
 app = Flask(__name__)
+from werkzeug.middleware.proxy_fix import ProxyFix
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+)
 csrf = CSRFProtect(app)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "data.db")
+if os.environ.get("RENDER") == "true" or os.environ.get("FLASK_ENV") == "production":
+    app.config["SESSION_COOKIE_SECURE"] = True 
+else:
+    app.config["SESSION_COOKIE_SECURE"] = False    
+
+
+DATA_DIR = os.getenv("DATA_DIR", "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+DB_PATH = os.path.join(DATA_DIR, "data.db")
 
 SUPPORTED_LANGS = ["tr", "sv", "en"]
 
@@ -36,17 +61,7 @@ def get_port():
         return int(os.environ.get("PORT", "5000"))
     except Exception:
         return 5000
-# ---------------- Security configs ----------------
-
-
-app.config.update(
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax",
-)
-
-if os.environ.get("RENDER", ""):
-    app.config["SESSION_COOKIE_SECURE"] = True
-
+    
 # ---------------- I18N ----------------
 I18N = {
     "tr": {
@@ -110,6 +125,13 @@ I18N = {
 
         "unlock": "Kilidi kaldır",
         "unlock_ok": "Kullanıcının giriş kilidi kaldırıldı.",
+        
+        "export_csv": "CSV indir",
+        "export_all_csv": "Tüm kayıtlar CSV",
+
+        "date_from": "Başlangıç",
+        "date_to": "Bitiş",
+        "download_csv": "CSV İndir",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
@@ -178,6 +200,13 @@ I18N = {
         "unlock": "Lås upp",
         "unlock_ok": "Inloggningslåset är borttaget.",
 
+        "export_csv": "Ladda ner CSV",
+        "export_all_csv": "Alla poster (CSV)", 
+
+        "date_from": "Från datum",
+        "date_to": "Till datum",
+        "download_csv": "Ladda ner CSV", 
+
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
         "lang_en": "English",
@@ -244,6 +273,13 @@ I18N = {
 
         "unlock": "Unlock",
         "unlock_ok": "Login lock cleared.",
+
+        "export_csv": "Download CSV",
+        "export_all_csv": "All records (CSV)",
+
+        "date_from": "From date",
+        "date_to": "To date",
+        "download_csv": "Download CSV",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
@@ -520,28 +556,65 @@ def index():
 
     show_all = (request.args.get("all") == "1") and getattr(current_user, "is_admin", False)
 
+    # --- A4: Range filtresi ---
+    range_days = (request.args.get("range") or "").strip()
+    
+    start = None
+    end = None
+
+    if range_days.isdigit():
+        d = int(range_days)
+        if d > 0:
+            start = (datetime.now() - timedelta(days=d)).strftime("%Y-%m-%d")
+            end = datetime.now().strftime("%Y-%m-%d")
+
     conn = get_db()
     try:
         if show_all:
-            rows = conn.execute(
-                """
-                SELECT r.id, r.day, r.sales, r.expense, r.profit, u.username
-                FROM records r
-                JOIN users u ON u.id = r.user_id
-                ORDER BY r.day DESC, r.id DESC
-                LIMIT 50
-                """
-            ).fetchall()
+            if start and end:
+                rows = conn.execute(
+                    """
+                    SELECT r.id, r.day, r.sales, r.expense, r.profit, u.username
+                    FROM records r
+                    JOIN users u ON u.id = r.user_id
+                    WHERE r.day BETWEEN ? AND ?
+                    ORDER BY r.day DESC, r.id DESC
+                    LIMIT 50
+                    """,
+                    (start, end)
+                ).fetchall()
 
-            totals = conn.execute(
-                """
-                SELECT
-                    COALESCE(SUM(r.sales),0) AS s,
-                    COALESCE(SUM(r.expense),0) AS e,
-                    COALESCE(SUM(r.profit),0) AS p
-                FROM records r
-                """
-            ).fetchone()
+                totals = conn.execute(
+                    """
+                    SELECT
+                        COALESCE(SUM(r.sales),0) AS s,
+                        COALESCE(SUM(r.expense),0) AS e,
+                        COALESCE(SUM(r.profit),0) AS p
+                    FROM records r
+                    WHERE r.day BETWEEN ? AND ?
+                    """,
+                    (start, end)
+                ).fetchone()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT r.id, r.day, r.sales, r.expense, r.profit, u.username
+                    FROM records r
+                    JOIN users u ON u.id = r.user_id
+                    ORDER BY r.day DESC, r.id DESC
+                    LIMIT 50
+                    """
+                ).fetchall()
+
+                totals = conn.execute(
+                    """
+                    SELECT
+                        COALESCE(SUM(r.sales),0) AS s,
+                        COALESCE(SUM(r.expense),0) AS e,
+                        COALESCE(SUM(r.profit),0) AS p
+                    FROM records r
+                    """
+                ).fetchone()
 
             daily_raw = conn.execute(
                 """
@@ -569,28 +642,52 @@ def index():
             ).fetchall()
 
         else:
-            rows = conn.execute(
-                """
-                SELECT id, day, sales, expense, profit
-                FROM records
-                WHERE user_id = ?
-                ORDER BY day DESC, id DESC
-                LIMIT 50
-                """,
-                (int(current_user.id),)
-            ).fetchall()
+            if start and end:
+                rows = conn.execute(
+                    """
+                    SELECT id, day, sales, expense, profit
+                    FROM records
+                    WHERE user_id = ? AND day BETWEEN ? AND ?
+                    ORDER BY day DESC, id DESC
+                    LIMIT 50
+                    """,
+                    (int(current_user.id), start, end)
+                ).fetchall()
 
-            totals = conn.execute(
-                """
-                SELECT
-                    COALESCE(SUM(sales),0) AS s,
-                    COALESCE(SUM(expense),0) AS e,
-                    COALESCE(SUM(profit),0) AS p
-                FROM records
-                WHERE user_id = ?
-                """,
-                (int(current_user.id),)
-            ).fetchone()
+                totals = conn.execute(
+                    """
+                    SELECT
+                        COALESCE(SUM(sales),0) AS s,
+                        COALESCE(SUM(expense),0) AS e,
+                        COALESCE(SUM(profit),0) AS p
+                    FROM records
+                    WHERE user_id = ? AND day BETWEEN ? AND ?
+                    """,
+                    (int(current_user.id), start, end)
+                ).fetchone()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT id, day, sales, expense, profit
+                    FROM records
+                    WHERE user_id = ?
+                    ORDER BY day DESC, id DESC
+                    LIMIT 50
+                    """,
+                    (int(current_user.id),)
+                ).fetchall()
+
+                totals = conn.execute(
+                    """
+                    SELECT
+                        COALESCE(SUM(sales),0) AS s,
+                        COALESCE(SUM(expense),0) AS e,
+                        COALESCE(SUM(profit),0) AS p
+                    FROM records
+                    WHERE user_id = ?
+                    """,
+                    (int(current_user.id),)
+                ).fetchone()
 
             daily_raw = conn.execute(
                 """
@@ -625,8 +722,8 @@ def index():
         total_expense = float(totals["e"] or 0)
         total_profit = float(totals["p"] or 0)
 
-        daily_rows = [dict(r) for r in reversed(daily_raw)]   # ASC for chart
-        monthly_rows = [dict(r) for r in monthly_raw]         # already ASC
+        daily_rows = [dict(r) for r in reversed(daily_raw)]
+        monthly_rows = [dict(r) for r in monthly_raw]
 
         return render_template(
             "index.html",
@@ -640,10 +737,14 @@ def index():
             total_sales=round(total_sales, 2),
             total_expense=round(total_expense, 2),
             total_profit=round(total_profit, 2),
+            start=start,
+            end=end,
+            range_days=range_days,
+            selected_range = (request.args.get("range") or "").strip()
         )
+
     finally:
         conn.close()
-
 
 @app.post("/records")
 @login_required
@@ -761,6 +862,163 @@ def edit_record(record_id):
     finally:
         conn.close()
 
+def _parse_date(s: str):
+    s = (s or "").strip()
+    return s if s else None
+
+def _export_where_clause(show_all: bool, user_id: int, start: str | None, end: str | None):
+    where = []
+    params = []
+
+    if not show_all:
+        where.append("r.user_id = ?")
+        params.append(int(user_id))
+
+    if start:
+        where.append("r.day >= ?")
+        params.append(start)
+    if end:
+        where.append("r.day <= ?")
+        params.append(end)
+
+    sql_where = ("WHERE " + " AND ".join(where)) if where else ""
+    return sql_where, params
+
+@app.get("/export.csv")
+@login_required
+def export_csv():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+
+    # filtreler
+    start = _parse_date(request.args.get("start"))
+    end = _parse_date(request.args.get("end"))
+
+    # admin all
+    show_all = (request.args.get("all") == "1") and getattr(current_user, "is_admin", False)
+
+    where_sql, params = _export_where_clause(show_all, int(current_user.id), start, end)
+
+    conn = get_db()
+    try:
+        rows = conn.execute(f"""
+            SELECT r.id, r.day, r.sales, r.expense, r.profit, u.username
+            FROM records r
+            JOIN users u ON u.id = r.user_id
+            {where_sql}
+            ORDER BY r.day DESC, r.id DESC
+        """, params).fetchall()
+    finally:
+        conn.close()
+
+    out = StringIO()
+    w = csv.writer(out)
+
+    # header
+    if show_all:
+        w.writerow(["id", "day", "username", "sales", "expense", "profit"])
+    else:
+        w.writerow(["id", "day", "sales", "expense", "profit"])
+
+    for r in rows:
+        if show_all:
+            w.writerow([r["id"], r["day"], r["username"], r["sales"], r["expense"], r["profit"]])
+        else:
+            w.writerow([r["id"], r["day"], r["sales"], r["expense"], r["profit"]])
+
+    # ---- filename (date + range) ----
+    start_q = (request.args.get("start") or "").strip()
+    end_q = (request.args.get("end") or "").strip()
+    range_q = (request.args.get("range") or "").strip()
+
+    start_part = start_q if start_q else "NA"
+    end_part = end_q if end_q else "NA"
+    range_part = f"range-{range_q}" if range_q else "range-all"
+
+    scope_part = (
+        "ALL"
+        if (request.args.get("all") == "1" and getattr(current_user, "is_admin", False))
+        else f"user-{current_user.id}"
+    )
+
+    filename = f"karapp_{scope_part}_{start_part}_{end_part}_{range_part}.csv"
+
+    return Response(
+        out.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+@app.get("/export.xlsx")
+@login_required
+def export_xlsx():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+
+    start = _parse_date(request.args.get("start"))
+    end = _parse_date(request.args.get("end"))
+    show_all = (request.args.get("all") == "1") and getattr(current_user, "is_admin", False)
+
+    where_sql, params = _export_where_clause(show_all, int(current_user.id), start, end)
+
+    conn = get_db()
+    try:
+        rows = conn.execute(f"""
+            SELECT r.id, r.day, r.sales, r.expense, r.profit, u.username
+            FROM records r
+            JOIN users u ON u.id = r.user_id
+            {where_sql}
+            ORDER BY r.day DESC, r.id DESC
+        """, params).fetchall()
+    finally:
+        conn.close()
+
+    from io import BytesIO
+    from flask import send_file
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Export"
+
+    if show_all:
+        ws.append(["id", "day", "username", "sales", "expense", "profit"])
+    else:
+        ws.append(["id", "day", "sales", "expense", "profit"])
+
+    for r in rows:
+        if show_all:
+            ws.append([r["id"], r["day"], r["username"], r["sales"], r["expense"], r["profit"]])
+        else:
+            ws.append([r["id"], r["day"], r["sales"], r["expense"], r["profit"]])
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+
+# ---- filename (date + range) ----
+    start_q = (request.args.get("start") or "").strip()
+    end_q = (request.args.get("end") or "").strip()
+    range_q = (request.args.get("range") or "").strip()
+
+    start_part = start_q if start_q else "NA"
+    end_part = end_q if end_q else "NA"
+    range_part = f"range-{range_q}" if range_q else "range-all"
+
+    scope_part = (
+        "ALL"
+        if (request.args.get("all") == "1" and getattr(current_user, "is_admin", False))
+        else f"user-{current_user.id}"
+)
+
+    filename: str = f"karapp_{scope_part}_{start_part}_{end_part}_{range_part}.xlsx"    
+
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 # ---------------- Admin: users ----------------
 @app.get("/admin/users")
@@ -871,8 +1129,4 @@ def admin_users_delete(user_id):
 # ---------------- Run ----------------
 if __name__ == "__main__":
     init_db()
-    app.run(
-        host="0.0.0.0",
-        port=get_port(),
-        debug=True
-    )
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)

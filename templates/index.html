@@ -1,235 +1,389 @@
 <!doctype html>
 <html lang="{{ lang or 'tr' }}">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ t.get("title","KaraApp") }}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t.get("title","KarApp") }}</title>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
     :root{
       --bg:#f5f7fb;
-      --card:#ffffff;
+      --card:#fff;
       --text:#111827;
       --muted:#6b7280;
-      --line:#e5e7eb;
       --primary:#2563eb;
       --danger:#ef4444;
-      --shadow:0 10px 30px rgba(0,0,0,.06);
       --radius:14px;
+      --shadow:0 10px 30px rgba(0,0,0,.06);
+      --line:#e5e7eb;
     }
+
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);}
-    a{color:inherit;text-decoration:none}
-    .wrap{max-width:1100px;margin:0 auto;padding:28px 18px 60px;}
-    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
-    h1{margin:0;font-size:40px;line-height:1.1;}
-    .subtitle{margin-top:6px;color:var(--muted);font-size:16px;max-width:520px;}
-    .right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;}
-    .lang{display:flex;gap:8px;flex-wrap:wrap;}
-    .lang a{border:1px solid var(--line);background:var(--card);padding:8px 12px;border-radius:999px;font-weight:700;font-size:14px;}
-    .lang a.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(37,99,235,.12) inset;}
-    .btn, .btn-outline{border-radius:999px;padding:9px 14px;font-weight:800;font-size:14px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:1px solid var(--line);background:var(--card);}
-    .btn{border-color:var(--primary);background:var(--primary);color:#fff;}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
-    .muted{color:var(--muted)}
-    .kpis{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
-    .kpi{padding:18px;}
-    .kpi .label{color:var(--muted);font-weight:800;font-size:13px;}
-    .kpi .val{margin-top:6px;font-weight:900;font-size:34px;letter-spacing:-0.5px;}
-    .green{color:#16a34a}
-    .two-col{margin-top:18px;display:grid;grid-template-columns:420px 1fr;gap:14px;align-items:start;}
-    @media (max-width:980px){.two-col{grid-template-columns:1fr;}}
-    .formCard{padding:16px;}
-    .formTitle{font-size:18px;font-weight:900;margin:0 0 10px 0;}
-    .formGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-    @media (max-width:520px){.formGrid{grid-template-columns:1fr;}}
-    .field label{display:block;font-size:13px;color:var(--muted);font-weight:800;margin-bottom:6px;}
-    .inp{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;outline:none;background:#fff;}
-    .inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12);}
-    .formActions{margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-    .note{margin-top:8px;font-size:13px;color:var(--muted);}
-    .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px;}
-    .chartCard{padding:16px;}
-    .chartTitle{margin:0 0 10px 0;font-size:18px;font-weight:900;}
-    .tableCard{margin-top:14px;padding:16px;}
-    table{width:100%;border-collapse:collapse;font-size:14px;}
-    th,td{padding:10px 10px;border-top:1px solid var(--line);text-align:left;}
-    th{border-top:0;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;}
-  </style>
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .wrap{max-width:1200px;margin:0 auto;padding:28px}
+
+    
+
+    @media (max-width: 900px){
+      .topbar{flex-direction:column; align-items:stretch;}
+      .top-right{align-items:flex-start;}
+    }
+
+    /* ===== LANG PILLS ===== */
+    .lang-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .pill{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:14px;
+      text-decoration:none;
+      color:inherit;
+    }
+    .pill.active{
+      border-color:var(--primary);
+      box-shadow:0 0 0 2px rgba(37,99,235,.12) inset;
+    }
+
+    /* ===== ACTION BUTTONS ===== */
+    .actions-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+
+    .btn-outline{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:14px;
+      text-decoration:none;
+      color:inherit;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .btn-outline:hover{
+      border-color:var(--primary);
+      box-shadow:0 0 0 2px rgba(37,99,235,.10) inset;
+    }
+
+    /* ===== KPI ===== */
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:18px;
+    }
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow:var(--shadow);
+    }
+    .kpi{
+      font-size:30px;
+      font-weight:900;
+    }
+    .profit{color:#16a34a}
+
+
+    /* ===== FORM ===== */
+    .form-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:12px;
+    }
+    input,button{
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      font-size:14px;
+    }
+    button{
+      background:var(--primary);
+      color:#fff;
+      border:none;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .note{margin-top:8px;color:var(--muted);font-size:13px}
+
+    /* ===== TABLE ===== */
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+
+    /* ===== CHART ===== */
+    canvas{width:100%!important;height:320px!important}
+    canvas{width:100%!important;height:320px!important}
+
+/* ===== Fixed header (top-right always at corner) ===== */
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:18px;
+}
+
+.header-left{max-width:520px;}
+
+.header-right{
+  margin-left:auto;
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-end;
+}
+
+.header-row{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
+}
+
+.header-group{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+}
+
+/* mobile */
+@media (max-width: 900px){
+  .header{flex-direction:column;}
+  .header-row{align-items:flex-start;}
+  .header-group{justify-content:flex-start;}
+}
+
+        .btn-outline{
+        border:1px solid var(--line);
+        background:#fff;
+        padding:8px 12px;
+        order-radius:999px;
+        font-weight:800;
+        font-size:14px;
+        text-decoration:none;
+        color:inherit;
+}
+
+        .btn-outline.active{
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(37,99,235,.12) inset;
+        background: #eef2ff;
+}
+
+</style>
 </head>
 
 <body>
-  <div class="wrap">
+<div class="wrap">
 
-    <div class="topbar">
-      <div>
-        <h1>{{ t.get("title","KaraApp") }}</h1>
-        <div class="subtitle">{{ t.get("subtitle","") }}</div>
-        <div style="margin-top:10px; font-weight:900;">
-          👋 {{ t.get("welcome","Hoşgeldin") }}, <span>{{ current_user.username }}</span>
-        </div>
+<!-- ===== TOP ===== -->
+<div class="header">
+  <div class="header-left">
+    <h1 style="margin:0;">{{ t.get("title","KarApp") }}</h1>
+    <p class="sub" style="margin:8px 0 0 0;">{{ t.get("subtitle","") }}</p>
+  <div style="margin-top:10px; font-weight:700; color:var(--muted);">
+  👋 {{ t.get("welcome","Welcome") }}, <span style="color:var(--text)">{{ current_user.username }}</span>
+  </div>
+  </div>
+
+  <div class="header-right">
+    <div class="header-row">
+      <!-- LANG -->
+      <div class="header-group">
+        <a class="pill {{ 'active' if lang=='tr' else '' }}" href="{{ url_for('index', lang='tr', all=('1' if show_all else None)) }}">🇹🇷 Türkçe</a>
+        <a class="pill {{ 'active' if lang=='sv' else '' }}" href="{{ url_for('index', lang='sv', all=('1' if show_all else None)) }}">🇸🇪 Svenska</a>
+        <a class="pill {{ 'active' if lang=='en' else '' }}" href="{{ url_for('index', lang='en', all=('1' if show_all else None)) }}">🇬🇧 English</a>
       </div>
 
-      <div class="right">
-        <div class="lang">
-          <a href="{{ url_for('index', lang='tr') }}" class="{{ 'active' if lang=='tr' else '' }}">🇹🇷 Türkçe</a>
-          <a href="{{ url_for('index', lang='sv') }}" class="{{ 'active' if lang=='sv' else '' }}">🇸🇪 Svenska</a>
-          <a href="{{ url_for('index', lang='en') }}" class="{{ 'active' if lang=='en' else '' }}">🇬🇧 English</a>
-        </div>
+      <!-- ACTIONS -->
+      <div class="header-group">
 
-        {% if current_user.is_admin %}
-          <a class="btn-outline" href="{{ url_for('admin_users', lang=lang) }}">
-            {{ t.get("admin_users","Kullanıcıları yönet") }}
-          </a>
-        {% endif %}
+ 
+        <a class="btn-outline"
+   href="{{ url_for('export_csv', lang=lang, all=('1' if show_all else None), start=start, end=end) }}">
+  ⬇️ CSV
+</a>
+
+<a class="btn-outline"
+   href="{{ url_for('export_xlsx', lang=lang, all=('1' if show_all else None), start=start, end=end) }}">
+  ⬇️ Excel
+</a>
+
+      <a class="btn-outline {{ 'active' if selected_range=='30' else '' }}"
+        href="{{ url_for('index', lang=lang, range='30', all=('1' if show_all else None)) }}">30</a>
+
+      <a class="btn-outline {{ 'active' if selected_range=='90' else '' }}"
+        href="{{ url_for('index', lang=lang, range='90', all=('1' if show_all else None)) }}">90</a>
+
+      <a class="btn-outline {{ 'active' if selected_range=='365' else '' }}"
+        href="{{ url_for('index', lang=lang, range='365', all=('1' if show_all else None)) }}">365</a>
+
+      <a class="btn-outline {{ 'active' if selected_range=='' else '' }}"
+        href="{{ url_for('index', lang=lang, all=('1' if show_all else None)) }}">
+          {{ t.get("all","Tümü") }}
+      </a>  
+
+          {% if current_user.is_admin %}
+          <a class="btn-outline" href="{{ url_for('index', lang=lang, all='1') }}">
+          {{ t.get("all_records","All records") }}
+      </a>
+      
+        <a class="btn-outline"
+          href="{{ url_for('admin_users', lang=lang) }}">
+
+
+      {{ t.get("manage_users","Kullanıcıları yönet") }}
+
+        </a>
+          {% endif %}
 
         <a class="btn-outline" href="{{ url_for('logout', lang=lang) }}">{{ t.get("logout","Çıkış") }}</a>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- KPIs -->
-    <div class="kpis">
-      <div class="card kpi">
-        <div class="label">{{ t.get("total_sales","Toplam satış") }}</div>
-        <div class="val">{{ total_sales }} {{ currency }}</div>
-      </div>
-      <div class="card kpi">
-        <div class="label">{{ t.get("total_expense","Toplam gider") }}</div>
-        <div class="val">{{ total_expense }} {{ currency }}</div>
-      </div>
-      <div class="card kpi">
-        <div class="label">{{ t.get("total_profit","Toplam kâr") }}</div>
-        <div class="val green">{{ total_profit }} {{ currency }}</div>
-      </div>
+  <!-- ===== KPI ===== -->
+  <div class="grid">
+    <div class="card">
+      <div>{{ t.get("total_sales","Toplam satış") }}</div>
+      <div class="kpi">{{ total_sales }} {{ currency }}</div>
     </div>
-
-    <div class="two-col">
-      <!-- New record -->
-      <div class="card formCard">
-        <h2 class="formTitle">{{ t.get("new_record","Yeni Kayıt") }}</h2>
-
-        <form method="post" action="{{ url_for('index_post', lang=lang) }}">
-          <div class="formGrid">
-            <div class="field">
-              <label>{{ t.get("date","Tarih") }}</label>
-              <input class="inp" type="date" name="day" required>
-            </div>
-
-            <div class="field">
-              <label>{{ t.get("sales","Satış") }} ({{ currency }})</label>
-              <input class="inp" type="number" step="0.01" name="sales" required placeholder="{{ t.get('sales','Satış') }}">
-            </div>
-
-            <div class="field">
-              <label>{{ t.get("expense","Gider") }} ({{ currency }})</label>
-              <input class="inp" type="number" step="0.01" name="expense" required placeholder="{{ t.get('expense','Gider') }}">
-            </div>
-          </div>
-
-          <div class="formActions">
-            <button class="btn" type="submit">{{ t.get("save","Kaydet") }}</button>
-          </div>
-
-          <div class="note">{{ t.get("profit_note","Not: Kâr otomatik = satış - gider") }}</div>
-        </form>
-      </div>
-
-      <!-- Charts -->
-      <div class="charts">
-        <div class="card chartCard">
-          <h3 class="chartTitle">{{ t.get("daily_chart_title","30 Günlük Grafik") }}</h3>
-          <canvas id="dailyChart"></canvas>
-          <div class="note">{{ t.get("profit_note","Not: Kâr otomatik = satış - gider") }}</div>
-        </div>
-
-        <div class="card chartCard">
-          <h3 class="chartTitle">{{ t.get("monthly_chart_title","Aylık Grafik") }}</h3>
-          <canvas id="monthlyChart"></canvas>
-          <div class="note">{{ t.get("profit_note","Not: Kâr otomatik = satış - gider") }}</div>
-        </div>
-      </div>
+    <div class="card">
+      <div>{{ t.get("total_expense","Toplam gider") }}</div>
+      <div class="kpi">{{ total_expense }} {{ currency }}</div>
     </div>
-
-    <!-- Table -->
-    <div class="card tableCard">
-      <h3 style="margin:0 0 10px 0; font-size:18px; font-weight:900;">
-        {{ t.get("records_title","Kayıtlar (son 50)") }}
-      </h3>
-
-      <table>
-        <thead>
-          <tr>
-            <th>{{ t.get("date","Tarih") }}</th>
-            <th>{{ t.get("sales","Satış") }}</th>
-            <th>{{ t.get("expense","Gider") }}</th>
-            <th>{{ t.get("profit","Kâr") }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          <tr>
-            <td>{{ r["day"] }}</td>
-            <td>{{ "%.2f"|format(r["sales"]) }} {{ currency }}</td>
-            <td>{{ "%.2f"|format(r["expense"]) }} {{ currency }}</td>
-            <td>{{ "%.2f"|format(r["profit"]) }} {{ currency }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="card">
+      <div>{{ t.get("total_profit","Toplam kâr") }}</div>
+      <div class="kpi profit">{{ total_profit }} {{ currency }}</div>
     </div>
-
   </div>
 
-  <script>
-    const dailyRows = {{ daily_rows|tojson }};
-    const monthlyRows = {{ monthly_rows|tojson }};
+  <!-- ===== FORM ===== -->
+  <div class="card" style="margin-top:20px">
+    <h3 style="margin:0 0 10px 0;">{{ t.get("new_record","Yeni kayıt") }}</h3>
+    <form method="post" action="{{ url_for('index_post', lang=lang) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-grid">
+        <input type="date" name="day" required>
+        <input type="number" step="0.01" name="sales" placeholder="{{ t.get('sales','Satış') }}" required>
+        <input type="number" step="0.01" name="expense" placeholder="{{ t.get('expense','Gider') }}" required>
+        <button type="submit">{{ t.get("save","Kaydet") }}</button>
+      </div>
+    </form>
+    <div class="note">{{ t.get("profit_note","Not: Kâr otomatik = satış - gider") }}</div>
+  </div>
 
-    function mkDaily() {
-      const labels = dailyRows.map(x => x.day);
-      const sales = dailyRows.map(x => x.sales);
-      const expense = dailyRows.map(x => x.expense);
-      const profit = dailyRows.map(x => x.profit);
+  <!-- ===== TABLE ===== -->
+  <div class="card" style="margin-top:20px">
+    <h3 style="margin:0 0 10px 0;">{{ t.get("records_title","Kayıtlar (son 50)") }}</h3>
 
-      new Chart(document.getElementById("dailyChart"), {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [
-            { label: "{{ t.get('sales','Satış') }}", data: sales },
-            { label: "{{ t.get('expense','Gider') }}", data: expense },
-            { label: "{{ t.get('profit','Kâr') }}", data: profit, type: "line" }
-          ]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-      document.getElementById("dailyChart").parentElement.style.height = "320px";
-    }
+    <table>
+      <thead>
+        <tr>
+          {% if show_all %}
+            <th>{{ t.get("user","Kullanıcı") }}</th>
+          {% endif %}
+          <th>{{ t.get("date","Tarih") }}</th>
+          <th>{{ t.get("sales","Satış") }}</th>
+          <th>{{ t.get("expense","Gider") }}</th>
+          <th>{{ t.get("profit","Kâr") }}</th>
+          <th>{{ t.get("actions","İşlem") }}</th>
+        </tr>
+      </thead>
 
-    function mkMonthly() {
-      const labels = monthlyRows.map(x => x.month);
-      const sales = monthlyRows.map(x => x.sales);
-      const expense = monthlyRows.map(x => x.expense);
-      const profit = monthlyRows.map(x => x.profit);
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          {% if show_all %}
+            <td>{{ r["username"] }}</td>
+          {% endif %}
 
-      new Chart(document.getElementById("monthlyChart"), {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [
-            { label: "{{ t.get('sales','Satış') }}", data: sales },
-            { label: "{{ t.get('expense','Gider') }}", data: expense },
-            { label: "{{ t.get('profit','Kâr') }}", data: profit, type: "line" }
-          ]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-      document.getElementById("monthlyChart").parentElement.style.height = "320px";
-    }
+          <td>{{ r["day"] }}</td>
+          <td>{{ "%.2f"|format(r["sales"]) }} {{ currency }}</td>
+          <td>{{ "%.2f"|format(r["expense"]) }} {{ currency }}</td>
+          <td>{{ "%.2f"|format(r["profit"]) }} {{ currency }}</td>
 
-    mkDaily();
-    mkMonthly();
-  </script>
+          <td style="white-space:nowrap;">
+            <a href="{{ url_for('edit_record', record_id=r['id'], lang=lang) }}"
+               title="{{ t.get('edit','Düzenle') }}"
+               style="margin-right:10px;">✏️</a>
+
+            <form method="post"
+                  action="{{ url_for('delete_record', record_id=r['id'], lang=lang) }}"
+                  style="display:inline"
+                  onsubmit="return confirm('{{ t.get('confirm_delete','Silinsin mi?') }}')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit"
+                      title="{{ t.get('delete','Sil') }}"
+                      style="border:none;background:none;cursor:pointer;padding:0;">
+                🗑️
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== CHARTS ===== -->
+  <div class="grid" style="margin-top:20px">
+    <div class="card"><canvas id="dailyChart"></canvas></div>
+    <div class="card"><canvas id="monthlyChart"></canvas></div>
+  </div>
+
+</div>
+
+<script>
+const dailyRows = {{ daily_rows|tojson }};
+const monthlyRows = {{ monthly_rows|tojson }};
+
+new Chart(dailyChart,{
+  type:'bar',
+  data:{
+    labels:dailyRows.map(x=>x.day),
+    datasets:[
+      {label:'{{ t.get("sales","Satış") }}',data:dailyRows.map(x=>x.sales)},
+      {label:'{{ t.get("expense","Gider") }}',data:dailyRows.map(x=>x.expense)},
+      {label:'{{ t.get("profit","Kâr") }}',data:dailyRows.map(x=>x.profit),type:'line'}
+    ]
+  }
+});
+
+new Chart(monthlyChart,{
+  type:'bar',
+  data:{
+    labels:monthlyRows.map(x=>x.month),
+    datasets:[
+      {label:'{{ t.get("sales","Satış") }}',data:monthlyRows.map(x=>x.sales)},
+      {label:'{{ t.get("expense","Gider") }}',data:monthlyRows.map(x=>x.expense)},
+      {label:'{{ t.get("profit","Kâr") }}',data:monthlyRows.map(x=>x.profit),type:'line'}
+    ]
+  }
+});
+</script>
 </body>
 </html>
