@@ -10,7 +10,6 @@ from io import StringIO
 from flask import Response
 
 
-from openpyxl import Workbook
 from io import BytesIO
 
 from datetime import datetime, timedelta
@@ -386,14 +385,6 @@ def init_db():
             admin_id = admin["id"] if admin else 1
             conn.execute("UPDATE records SET user_id = ? WHERE user_id IS NULL", (admin_id,))
 
-        # default admin if none exists
-        exists = conn.execute("SELECT id FROM users LIMIT 1").fetchone()
-        if not exists:
-            conn.execute(
-                "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 1)",
-                ("admin", generate_password_hash("admin123")),
-            )
-
         conn.commit()
     finally:
         conn.close()
@@ -402,6 +393,37 @@ def init_db():
 _db_inited = False
 _db_lock = threading.Lock()
 
+def ensure_admin_from_env_once():
+    flag = os.environ.get("ADMIN_CREATE_ON_START", "").lower() == "true"
+    if not flag:
+        return
+
+    username = (os.environ.get("ADMIN_USERNAME") or "").strip()
+    password = (os.environ.get("ADMIN_PASSWORD") or "").strip()
+
+    if not username or not password:
+        print("ADMIN env missing", flush=True)
+        return
+
+    conn = get_db()
+    try:
+        admin_exists = conn.execute(
+            "SELECT id FROM users WHERE is_admin = 1 LIMIT 1"
+        ).fetchone()
+
+        if admin_exists:
+            print("Admin already exists, skipping.", flush=True)
+            return
+
+        conn.execute(
+            "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 1)",
+            (username, generate_password_hash(password)),
+        )
+        conn.commit()
+        print(f"Admin created from env: {username}", flush=True)
+
+    finally:
+        conn.close()
 
 def ensure_db():
     global _db_inited
@@ -411,8 +433,14 @@ def ensure_db():
         if _db_inited:
             return
         init_db()
+        ensure_admin_from_env_once()
         _db_inited = True
 
+# ✅ Ensure DB + initial admin even when running under gunicorn (Render)
+try:
+    ensure_db()   # burada init_db + ensure_admin_from_env_once zaten var
+except Exception as e:
+    print("Startup init error:", e, flush=True)
 
 @app.before_request
 def _ensure_db_before_request():
@@ -952,6 +980,7 @@ def export_csv():
 @app.get("/export.xlsx")
 @login_required
 def export_xlsx():
+    from openpyxl import Workbook
     lang = pick_lang(request)
     t = I18N.get(lang, I18N["tr"])
 
@@ -1129,4 +1158,10 @@ def admin_users_delete(user_id):
 # ---------------- Run ----------------
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=False)
+    ensure_admin_from_env_once()
+    app.run(
+        host="0.0.0.0",
+        port=get_port(),
+        debug=False,
+        use_reloader=False
+    )
