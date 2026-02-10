@@ -42,6 +42,15 @@ app.config.update(
 )
 csrf = CSRFProtect(app)
 
+from flask_wtf.csrf import CSRFError
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+    flash(t.get("csrf_error", "Güvenlik doğrulaması başarısız. Sayfayı yenileyip tekrar dene."), "error")
+    return redirect(request.referrer or url_for("login", lang=lang))
+
 if os.environ.get("RENDER") == "true" or os.environ.get("FLASK_ENV") == "production":
     app.config["SESSION_COOKIE_SECURE"] = True 
 else:
@@ -532,12 +541,7 @@ def admin_required(fn):
 
 
 # ---------------- Routes: auth ----------------
-@app.get("/login")
-def login():
-    lang = pick_lang(request)
-    t = I18N.get(lang, I18N["tr"])
-    return render_template("login.html", lang=lang, t=t)
-
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 @app.post("/login")
 def login_post():
@@ -554,7 +558,7 @@ def login_post():
         flash(t.get("need_username_password"), "error")
         return redirect(url_for("login", lang=lang))
 
-    key = username.lower()  # ✅ kilit anahtarı artık username
+    key = username.strip().lower()  # boşluk + case güvenli
 
     locked_until = _login_locked_until.get(key, 0)
     if now < locked_until:
@@ -582,8 +586,22 @@ def login_post():
     _login_attempts.pop(key, None)
     _login_locked_until.pop(key, None)
 
-    nxt = request.args.get("next") or url_for("index", lang=lang)
-    return redirect(nxt)
+    # ---- NEXT + LANG FIX (MUTLAKA FONKSİYON İÇİNDE) ----
+    nxt = request.args.get("next")
+    if not nxt:
+        return redirect(url_for("index", lang=lang))
+
+    # güvenlik: sadece relative URL
+    p = urlparse(nxt)
+    if p.scheme or p.netloc:
+        return redirect(url_for("index", lang=lang))
+
+    qs = parse_qs(p.query)
+    if "lang" not in qs:
+        qs["lang"] = [lang]
+
+    fixed = urlunparse(("", "", p.path or "/", p.params, urlencode(qs, doseq=True), p.fragment))
+    return redirect(fixed)
 
 @app.get("/logout")
 @login_required
