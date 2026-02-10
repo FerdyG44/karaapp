@@ -35,11 +35,20 @@ from flask_wtf.csrf import CSRFProtect
 # ---------------- App ----------------
 app = Flask(__name__)
 from werkzeug.middleware.proxy_fix import ProxyFix
+
+app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
+
+IS_PROD = (os.environ.get("RENDER") == "true") or (os.environ.get("FLASK_ENV") == "production")
+
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=IS_PROD,   # prod: True / local: False
 )
+
 csrf = CSRFProtect(app)
 
 from flask_wtf.csrf import CSRFError
@@ -51,11 +60,7 @@ def handle_csrf_error(e):
     flash(t.get("csrf_error", "Güvenlik doğrulaması başarısız. Sayfayı yenileyip tekrar dene."), "error")
     return redirect(request.referrer or url_for("login", lang=lang))
 
-if os.environ.get("RENDER") == "true" or os.environ.get("FLASK_ENV") == "production":
-    app.config["SESSION_COOKIE_SECURE"] = True 
-else:
-    app.config["SESSION_COOKIE_SECURE"] = False    
-
+# ---------------- Config ----------------
 
 DATA_DIR = os.getenv("DATA_DIR", "data")
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -542,6 +547,12 @@ def admin_required(fn):
 
 # ---------------- Routes: auth ----------------
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
+@app.get("/login")
+def login():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+    return render_template("login.html", lang=lang, t=t)
 
 @app.post("/login")
 def login_post():
