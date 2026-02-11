@@ -225,12 +225,12 @@
 
  
         <a class="btn-outline"
-   href="{{ url_for('export_csv', lang=lang, all=('1' if show_all else None), start=start, end=end) }}">
+   href="{{ url_for('export', lang=lang, fmt='csv', all=('1' if show_all else None), start=start, end=end, range=range_days) }}">
   ⬇️ CSV
 </a>
 
-<a class="btn-outline"
-   href="{{ url_for('export_xlsx', lang=lang, all=('1' if show_all else None), start=start, end=end) }}">
+        <a class="btn-outline"
+   href="{{ url_for('export', lang=lang, fmt='xlsx', all=('1' if show_all else None), start=start, end=end, range=range_days) }}">
   ⬇️ Excel
 </a>
 
@@ -263,12 +263,6 @@
           {% endif %}
 
         <a class="btn-outline" href="{{ url_for('logout', lang=lang) }}">{{ t.get("logout","Çıkış") }}</a>
-        <a class="btn-outline" href="{{ url_for('export_xlsx', lang=lang) }}">
-        Export (Excel)
-
-        <a class="btn-outline" href="{{ url_for('export_csv', lang=lang) }}">
-        Export (CSV)
-        </a>
         </a>
       </div>
     </div>
