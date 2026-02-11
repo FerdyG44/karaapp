@@ -1019,58 +1019,24 @@ def _export_where_clause(show_all: bool, user_id: int, start: str | None, end: s
     sql_where = ("WHERE " + " AND ".join(where)) if where else ""
     return sql_where, params
 
-from flask import send_file
-from io import BytesIO
-from openpyxl import Workbook
 
 @app.get("/export")
 @login_required
-def export_xlsx():
-    lang = pick_lang(request)
-
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            "SELECT day, sales, expense, profit FROM records WHERE user_id = ? ORDER BY day DESC",
-            (int(current_user.id),),
-        ).fetchall()
-    finally:
-        conn.close()
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Records"
-
-    ws.append(["Day", "Sales", "Expense", "Profit"])
-    for r in rows:
-        ws.append([r["day"], r["sales"], r["expense"], r["profit"]])
-
-    bio = BytesIO()
-    wb.save(bio)
-    bio.seek(0)
-
-    filename = f"karaapp_records_{lang}.xlsx"
-    return send_file(
-        bio,
-        as_attachment=True,
-        download_name=filename,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-
-@app.get("/export.csv")
-@login_required
-def export_csv():
+def export():
     lang = pick_lang(request)
     t = I18N.get(lang, I18N["tr"])
 
-    if current_user.plan == "free":
+    # free plan export kapalıysa
+    if getattr(current_user, "plan", "free") == "free":
         return redirect(url_for("index", lang=lang))
+
+    fmt = (request.args.get("fmt") or "csv").lower().strip()
+    if fmt not in ("csv", "xlsx"):
+        fmt = "csv"
 
     # filtreler
     start = _parse_date(request.args.get("start"))
     end = _parse_date(request.args.get("end"))
-
-    # admin all
     show_all = (request.args.get("all") == "1") and getattr(current_user, "is_admin", False)
 
     where_sql, params = _export_where_clause(show_all, int(current_user.id), start, end)
@@ -1087,22 +1053,7 @@ def export_csv():
     finally:
         conn.close()
 
-    out = StringIO()
-    w = csv.writer(out)
-
-    # header
-    if show_all:
-        w.writerow(["id", "day", "username", "sales", "expense", "profit"])
-    else:
-        w.writerow(["id", "day", "sales", "expense", "profit"])
-
-    for r in rows:
-        if show_all:
-            w.writerow([r["id"], r["day"], r["username"], r["sales"], r["expense"], r["profit"]])
-        else:
-            w.writerow([r["id"], r["day"], r["sales"], r["expense"], r["profit"]])
-
-    # ---- filename (date + range) ----
+    # ---- filename (date + range + scope) ----
     start_q = (request.args.get("start") or "").strip()
     end_q = (request.args.get("end") or "").strip()
     range_q = (request.args.get("range") or "").strip()
@@ -1117,42 +1068,34 @@ def export_csv():
         else f"user-{current_user.id}"
     )
 
-    filename = f"karapp_{scope_part}_{start_part}_{end_part}_{range_part}.csv"
+    # ===== CSV =====
+    if fmt == "csv":
+        import csv
+        from io import StringIO
+        from flask import Response
 
-    return Response(
-        out.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-    )
+        out = StringIO()
+        w = csv.writer(out)
 
-@app.get("/export.xlsx")
-@login_required
-def export_xlsx():
-    from openpyxl import Workbook
-    lang = pick_lang(request)
-    t = I18N.get(lang, I18N["tr"])
+        if show_all:
+            w.writerow(["id", "day", "username", "sales", "expense", "profit"])
+        else:
+            w.writerow(["id", "day", "sales", "expense", "profit"])
 
-    if current_user.plan == "free":
-        return redirect(url_for("index", lang=lang))
+        for r in rows:
+            if show_all:
+                w.writerow([r["id"], r["day"], r["username"], r["sales"], r["expense"], r["profit"]])
+            else:
+                w.writerow([r["id"], r["day"], r["sales"], r["expense"], r["profit"]])
 
-    start = _parse_date(request.args.get("start"))
-    end = _parse_date(request.args.get("end"))
-    show_all = (request.args.get("all") == "1") and getattr(current_user, "is_admin", False)
+        filename = f'karapp_{scope_part}_{start_part}_{end_part}_{range_part}.csv'
+        return Response(
+            out.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
 
-    where_sql, params = _export_where_clause(show_all, int(current_user.id), start, end)
-
-    conn = get_db()
-    try:
-        rows = conn.execute(f"""
-            SELECT r.id, r.day, r.sales, r.expense, r.profit, u.username
-            FROM records r
-            JOIN users u ON u.id = r.user_id
-            {where_sql}
-            ORDER BY r.day DESC, r.id DESC
-        """, params).fetchall()
-    finally:
-        conn.close()
-
+    # ===== XLSX =====
     from io import BytesIO
     from flask import send_file
     import openpyxl
@@ -1176,23 +1119,7 @@ def export_xlsx():
     wb.save(bio)
     bio.seek(0)
 
-# ---- filename (date + range) ----
-    start_q = (request.args.get("start") or "").strip()
-    end_q = (request.args.get("end") or "").strip()
-    range_q = (request.args.get("range") or "").strip()
-
-    start_part = start_q if start_q else "NA"
-    end_part = end_q if end_q else "NA"
-    range_part = f"range-{range_q}" if range_q else "range-all"
-
-    scope_part = (
-        "ALL"
-        if (request.args.get("all") == "1" and getattr(current_user, "is_admin", False))
-        else f"user-{current_user.id}"
-)
-
-    filename: str = f"karapp_{scope_part}_{start_part}_{end_part}_{range_part}.xlsx"    
-
+    filename = f'karapp_{scope_part}_{start_part}_{end_part}_{range_part}.xlsx'
     return send_file(
         bio,
         as_attachment=True,
