@@ -544,6 +544,28 @@ def get_user_by_id(user_id: int):
         plan=row["plan"],
     )
 
+def get_user_by_username(username):
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT id, username, password_hash, is_admin, expires_at, plan FROM users WHERE username = ?",
+            (username,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return None
+
+    return User(
+        id=row["id"],
+        username=row["username"],
+        password_hash=row["password_hash"],
+        is_admin=row["is_admin"],
+        expires_at=row["expires_at"],
+        plan=row["plan"],
+    )
+
 @login_manager.user_loader
 def load_user(user_id):
     try:
