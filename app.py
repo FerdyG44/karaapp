@@ -33,11 +33,14 @@ from flask_login import (
 from flask_wtf.csrf import CSRFProtect
 
 # ---------------- App ----------------
-app = Flask(__name__)
+from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
+import os
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+# Render/Cloudflare gibi proxy arkasında doğru proto/host almak için
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
 
