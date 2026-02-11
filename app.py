@@ -1023,18 +1023,13 @@ def _export_where_clause(show_all: bool, user_id: int, start: str | None, end: s
 @app.get("/export")
 @login_required
 def export():
+    fmt = request.args.get("fmt", "csv")
     lang = pick_lang(request)
-    t = I18N.get(lang, I18N["tr"])
 
-    # free plan export kapalıysa
+    # Free plan kapalıysa
     if getattr(current_user, "plan", "free") == "free":
         return redirect(url_for("index", lang=lang))
 
-    fmt = (request.args.get("fmt") or "csv").lower().strip()
-    if fmt not in ("csv", "xlsx"):
-        fmt = "csv"
-
-    # filtreler
     start = _parse_date(request.args.get("start"))
     end = _parse_date(request.args.get("end"))
     show_all = (request.args.get("all") == "1") and getattr(current_user, "is_admin", False)
@@ -1053,34 +1048,19 @@ def export():
     finally:
         conn.close()
 
-    # ---- filename (date + range + scope) ----
-    start_q = (request.args.get("start") or "").strip()
-    end_q = (request.args.get("end") or "").strip()
-    range_q = (request.args.get("range") or "").strip()
-
-    start_part = start_q if start_q else "NA"
-    end_part = end_q if end_q else "NA"
-    range_part = f"range-{range_q}" if range_q else "range-all"
-
-    scope_part = (
-        "ALL"
-        if (request.args.get("all") == "1" and getattr(current_user, "is_admin", False))
-        else f"user-{current_user.id}"
-    )
-
-    # ===== CSV =====
+    # ---------- CSV ----------
     if fmt == "csv":
-        import csv
         from io import StringIO
+        import csv
         from flask import Response
 
         out = StringIO()
         w = csv.writer(out)
 
         if show_all:
-            w.writerow(["id", "day", "username", "sales", "expense", "profit"])
+            w.writerow(["id","day","username","sales","expense","profit"])
         else:
-            w.writerow(["id", "day", "sales", "expense", "profit"])
+            w.writerow(["id","day","sales","expense","profit"])
 
         for r in rows:
             if show_all:
@@ -1088,44 +1068,46 @@ def export():
             else:
                 w.writerow([r["id"], r["day"], r["sales"], r["expense"], r["profit"]])
 
-        filename = f'karapp_{scope_part}_{start_part}_{end_part}_{range_part}.csv'
         return Response(
             out.getvalue(),
             mimetype="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": "attachment; filename=karapp_export.csv"}
         )
 
-    # ===== XLSX =====
-    from io import BytesIO
-    from flask import send_file
-    import openpyxl
+    # ---------- XLSX ----------
+    elif fmt == "xlsx":
+        from io import BytesIO
+        from flask import send_file
+        import openpyxl
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Export"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Export"
 
-    if show_all:
-        ws.append(["id", "day", "username", "sales", "expense", "profit"])
-    else:
-        ws.append(["id", "day", "sales", "expense", "profit"])
-
-    for r in rows:
         if show_all:
-            ws.append([r["id"], r["day"], r["username"], r["sales"], r["expense"], r["profit"]])
+            ws.append(["id","day","username","sales","expense","profit"])
         else:
-            ws.append([r["id"], r["day"], r["sales"], r["expense"], r["profit"]])
+            ws.append(["id","day","sales","expense","profit"])
 
-    bio = BytesIO()
-    wb.save(bio)
-    bio.seek(0)
+        for r in rows:
+            if show_all:
+                ws.append([r["id"], r["day"], r["username"], r["sales"], r["expense"], r["profit"]])
+            else:
+                ws.append([r["id"], r["day"], r["sales"], r["expense"], r["profit"]])
 
-    filename = f'karapp_{scope_part}_{start_part}_{end_part}_{range_part}.xlsx'
-    return send_file(
-        bio,
-        as_attachment=True,
-        download_name=filename,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+        bio = BytesIO()
+        wb.save(bio)
+        bio.seek(0)
+
+        return send_file(
+            bio,
+            as_attachment=True,
+            download_name="karapp_export.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    # fallback
+    return redirect(url_for("index", lang=lang))
 
 # ---------------- Admin: users ----------------
 @app.get("/admin/users")
