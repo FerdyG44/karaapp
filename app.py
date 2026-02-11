@@ -33,13 +33,14 @@ from flask_login import (
 from flask_wtf.csrf import CSRFProtect
 
 # ---------------- App ----------------
+import os
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
-import os
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 app = Flask(__name__)
 
-# Render/Cloudflare gibi proxy arkasında doğru proto/host almak için
+# Proxy arkasında doğru https/host algısı
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
@@ -49,19 +50,18 @@ IS_PROD = (os.environ.get("RENDER") == "true") or (os.environ.get("FLASK_ENV") =
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=IS_PROD,   # prod: True / local: False
+    SESSION_COOKIE_SECURE=IS_PROD,
 )
 
 csrf = CSRFProtect(app)
 
-from flask_wtf.csrf import CSRFError
-
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
-    lang = pick_lang(request)
-    t = I18N.get(lang, I18N["tr"])
-    flash(t.get("csrf_error", "Güvenlik doğrulaması başarısız. Sayfayı yenileyip tekrar dene."), "error")
-    return redirect(request.referrer or url_for("login", lang=lang))
+    # pick_lang/I18N bu satırdan sonra tanımlıysa burada kullanma,
+    # basit bir redirect yap
+    from flask import request, redirect, url_for, flash
+    flash("CSRF error. Refresh and try again.", "error")
+    return redirect(request.referrer or url_for("login", lang="tr"))
 
 # ---------------- Config ----------------
 
@@ -522,12 +522,12 @@ def get_user_by_id(user_id: int):
         conn.close()
 
 
-def get_user_by_username(username):
+def get_user_by_id(user_id: int):
     conn = get_db()
     try:
         row = conn.execute(
-            "SELECT id, username, password_hash, is_admin, expires_at, plan FROM users WHERE username = ?",
-            (username,),
+            "SELECT id, username, password_hash, is_admin, expires_at, plan FROM users WHERE id = ?",
+            (user_id,),
         ).fetchone()
     finally:
         conn.close()
