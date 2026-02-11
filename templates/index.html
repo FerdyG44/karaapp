@@ -206,6 +206,9 @@
   <div style="margin-top:10px; font-weight:700; color:var(--muted);">
   👋 {{ t.get("welcome","Welcome") }}, <span style="color:var(--text)">{{ current_user.username }}</span>
   </div>
+  <div style="margin-top:6px; font-size:13px; font-weight:700;">
+  Plan: {{ current_user.plan|capitalize }}
+  </div>
   </div>
 
   <div class="header-right">
@@ -249,7 +252,7 @@
           <a class="btn-outline" href="{{ url_for('index', lang=lang, all='1') }}">
           {{ t.get("all_records","All records") }}
       </a>
-      
+
         <a class="btn-outline"
           href="{{ url_for('admin_users', lang=lang) }}">
 

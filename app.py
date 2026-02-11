@@ -399,6 +399,11 @@ def init_db():
             admin_id = admin["id"] if admin else 1
             conn.execute("UPDATE records SET user_id = ? WHERE user_id IS NULL", (admin_id,))
 
+        # migration: add plan if missing
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+        if "plan" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'free'")
+        
         conn.commit()
     finally:
         conn.close()
@@ -487,13 +492,14 @@ login_manager.login_view = "login"
 
 
 class User(UserMixin):
-    def __init__(self, row):
-        self.id = row["id"]
-        self.username = row["username"]
-        self.password_hash = row["password_hash"]
-        self.is_admin = bool(row["is_admin"])
-        self.expires_at = row["expires_at"]
-
+    def __init__(self, id, username, password_hash, is_admin=0, expires_at=None, plan="free"):
+        self.id = id
+        self.username = username
+        self.password_hash = password_hash
+        self.is_admin = is_admin
+        self.expires_at = expires_at
+        self.plan = plan or "free"
+        
     def is_expired(self) -> bool:
         if not self.expires_at:
             return False
@@ -832,6 +838,22 @@ def index_post():
     sales = parse_float(request.form.get("sales"), 0)
     expense = parse_float(request.form.get("expense"), 0)
 
+    # ---- plan limit: free max 100 records ----
+    if getattr(current_user, "plan", "free") == "free":
+        conn = get_db()
+        try:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM records WHERE user_id = ?",
+                (int(current_user.id),)
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+        if count >= 100:
+            flash("Free plan limit reached (100 records). Upgrade to Pro.", "error")
+            return redirect(url_for("index", lang=lang))
+
+    # ---- validations ----
     if not is_valid_date_yyyy_mm_dd(day):
         flash(t.get("invalid_date"), "error")
         return redirect(url_for("index", lang=lang))
@@ -850,14 +872,13 @@ def index_post():
     try:
         conn.execute(
             "INSERT INTO records (user_id, day, sales, expense, profit) VALUES (?, ?, ?, ?, ?)",
-            (int(current_user.id), day, sales, expense, profit)
+            (int(current_user.id), day, sales, expense, profit),
         )
         conn.commit()
     finally:
         conn.close()
 
     return redirect(url_for("index", lang=lang))
-
 
 @app.post("/records/<int:record_id>/delete")
 @login_required
@@ -966,6 +987,9 @@ def export_csv():
     lang = pick_lang(request)
     t = I18N.get(lang, I18N["tr"])
 
+    if current_user.plan == "free":
+        return redirect(url_for("index", lang=lang))
+
     # filtreler
     start = _parse_date(request.args.get("start"))
     end = _parse_date(request.args.get("end"))
@@ -1031,6 +1055,9 @@ def export_xlsx():
     from openpyxl import Workbook
     lang = pick_lang(request)
     t = I18N.get(lang, I18N["tr"])
+
+    if current_user.plan == "free":
+        return redirect(url_for("index", lang=lang))
 
     start = _parse_date(request.args.get("start"))
     end = _parse_date(request.args.get("end"))
