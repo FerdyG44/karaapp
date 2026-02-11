@@ -1019,6 +1019,44 @@ def _export_where_clause(show_all: bool, user_id: int, start: str | None, end: s
     sql_where = ("WHERE " + " AND ".join(where)) if where else ""
     return sql_where, params
 
+from flask import send_file
+from io import BytesIO
+from openpyxl import Workbook
+
+@app.get("/export")
+@login_required
+def export_xlsx():
+    lang = pick_lang(request)
+
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT day, sales, expense, profit FROM records WHERE user_id = ? ORDER BY day DESC",
+            (int(current_user.id),),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Records"
+
+    ws.append(["Day", "Sales", "Expense", "Profit"])
+    for r in rows:
+        ws.append([r["day"], r["sales"], r["expense"], r["profit"]])
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+
+    filename = f"karaapp_records_{lang}.xlsx"
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
 @app.get("/export.csv")
 @login_required
 def export_csv():

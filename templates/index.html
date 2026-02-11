@@ -263,6 +263,13 @@
           {% endif %}
 
         <a class="btn-outline" href="{{ url_for('logout', lang=lang) }}">{{ t.get("logout","Çıkış") }}</a>
+        <a class="btn-outline" href="{{ url_for('export_xlsx', lang=lang) }}">
+        Export (Excel)
+
+        <a class="btn-outline" href="{{ url_for('export_csv', lang=lang) }}">
+        Export (CSV)
+        </a>
+        </a>
       </div>
     </div>
   </div>
