@@ -60,47 +60,45 @@
     {% endwith %}
 
     <div class="grid">
-      <!-- Create user -->
-      <div class="card">
-        <h3 style="margin:0 0 10px 0;">{{ t.get("create","Oluştur") }}</h3>
-        <form method="post" action="{{ url_for('admin_unlock_login', lang=lang) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="ip" value="{{ request.remote_addr }}">
-          <button type="submit" title="Unlock" style="border:none;background:none;cursor:pointer;">🔓</button>
-          </form>
-          <div class="row">
-            <div>
-              <label>{{ t.get("username","Kullanıcı adı") }}</label>
-              <input class="inp" name="username" required>
-            </div>
-            <div>
-              <label>{{ t.get("password","Şifre") }}</label>
-              <input class="inp" type="password" name="password" required>
-            </div>
-          </div>
 
-          <div class="row" style="margin-top:10px;">
-            <div>
-              <label>{{ t.get("expires_days","Kaç gün geçerli? (0 = süresiz)") }}</label>
-              <input class="inp" type="number" min="0" name="days" value="0">
-              <div class="muted" style="font-size:12px; margin-top:6px;">
-                {{ t.get("expires_at","Bitiş") }} → {{ t.get("expired","Süre dolmuş kullanıcı") }}
-              </div>
-            </div>
-            <div>
-              <label>{{ t.get("is_admin","Admin mi?") }}</label>
-              <select class="inp" name="is_admin">
-                <option value="0">{{ t.get("user","Kullanıcı") }}</option>
-                <option value="1">{{ t.get("admin","Admin") }}</option>
-              </select>
-            </div>
-          </div>
+<!-- Create user -->
+<div class="card">
+  <h3 style="margin:0 0 10px 0;">{{ t.get("create","Oluştur") }}</h3>
 
-          <div class="actions">
-            <button class="btn" type="submit">{{ t.get("create","Oluştur") }}</button>
-          </div>
-        </form>
+  <form method="post" action="{{ url_for('admin_users_create', lang=lang) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="row">
+      <div>
+        <label>{{ t.get("username","Kullanıcı adı") }}</label>
+        <input class="inp" name="username" required>
       </div>
+      <div>
+        <label>{{ t.get("password","Şifre") }}</label>
+        <input class="inp" type="password" name="password" required>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label>{{ t.get("expires_days","Kaç gün geçerli? (0 = süresiz)") }}</label>
+        <input class="inp" type="number" min="0" name="expires_days" value="0">
+      </div>
+
+      <div>
+        <label>{{ t.get("is_admin","Admin mi?") }}</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <input type="checkbox" name="is_admin">
+          <span class="muted">{{ t.get("admin","Admin") }}</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" type="submit">{{ t.get("create","Oluştur") }}</button>
+    </div>
+  </form>
+</div>
 
       <!-- Users table -->
       <div class="card">
@@ -140,7 +138,7 @@
                   <input type="hidden" name="username" value="{{ u['username'] }}">
                   <button type="submit" title="{{ t.get('unlock','Kilidi kaldır') }}" style="border:none;background:none;cursor:pointer;">
                   🔓</button>
-                </form>  
+                </form>
                   {% else %}
                     <span class="muted" style="font-size:12px;">(you)</span>
                   {% endif %}
