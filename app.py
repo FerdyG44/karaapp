@@ -68,7 +68,7 @@ def handle_csrf_error(e):
 DATA_DIR = os.getenv("DATA_DIR", "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
-DB_PATH = os.path.join(DATA_DIR, "data.db")
+DB_PATH = os.environ.get("DB_PATH") or ("/data/data.db" if IS_PROD else "data.db")
 
 SUPPORTED_LANGS = ["tr", "sv", "en"]
 
