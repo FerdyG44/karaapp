@@ -262,6 +262,14 @@
         </a>
           {% endif %}
 
+        {% if current_user.plan == 'free' %}
+      <a class="btn-outline"
+      style="background:#2563eb;color:#fff;border-color:#2563eb"
+      href="{{ url_for('billing', lang=lang) }}">
+        ⭐ Pro’ya geç
+      </a>
+        {% endif %}
+
         <a class="btn-outline" href="{{ url_for('logout', lang=lang) }}">{{ t.get("logout","Çıkış") }}</a>
         </a>
       </div>

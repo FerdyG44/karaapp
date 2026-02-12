@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="{{ lang or 'tr' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t.get("billing","Abonelik") }} — {{ t.get("title","KaraApp") }}</title>
+  <style>
+    body{font-family:system-ui;margin:0;background:#f5f7fb}
+    .wrap{max-width:720px;margin:0 auto;padding:24px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+    .btn{padding:10px 14px;border-radius:999px;border:1px solid #e5e7eb;background:#2563eb;color:#fff;font-weight:900;cursor:pointer}
+    .btn2{padding:10px 14px;border-radius:999px;border:1px solid #e5e7eb;background:#111827;color:#fff;font-weight:900;cursor:pointer}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .muted{color:#6b7280;font-size:13px;margin-top:10px}
+    a{color:inherit;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2 style="margin:0 0 8px 0;">{{ t.get("billing_title","Pro Abonelik") }}</h2>
+      <div class="muted">
+        {{ t.get("billing_desc","CSV/Excel indirme gibi Pro özellikler için abonelik başlat.") }}
+      </div>
+
+      <div class="row">
+        <form method="post" action="{{ url_for('create_checkout_session', lang=lang) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="type" value="monthly">
+          <button class="btn" type="submit">💳 {{ t.get("monthly","Aylık") }}</button>
+        </form>
+
+        <form method="post" action="{{ url_for('create_checkout_session', lang=lang) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="type" value="yearly">
+          <button class="btn2" type="submit">💳 {{ t.get("yearly","Yıllık") }}</button>
+        </form>
+
+        <a class="btn" style="background:#fff;color:#111827" href="{{ url_for('index', lang=lang) }}">
+          ← {{ t.get("back","Geri") }}
+        </a>
+      </div>
+
+      <div class="muted">
+        {{ t.get("billing_note","Ödeme Stripe üzerinden güvenli şekilde alınır.") }}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -32,6 +32,10 @@ from flask_login import (
 
 from flask_wtf.csrf import CSRFProtect
 
+import stripe
+
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+
 # ---------------- App ----------------
 import os
 from flask import Flask
@@ -1115,6 +1119,174 @@ def export():
 
     # fallback
     return redirect(url_for("index", lang=lang))
+
+@app.get("/billing")
+@login_required
+def billing():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+    return render_template("billing.html", lang=lang, t=t)
+
+import os
+import stripe
+from flask import abort, redirect, request, url_for
+from flask_login import login_required, current_user
+
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+
+PRICE_MONTHLY = os.environ.get("STRIPE_PRICE_ID_PRO_MONTHLY")
+PRICE_YEARLY  = os.environ.get("STRIPE_PRICE_ID_PRO_YEARLY")
+APP_BASE_URL  = os.environ.get("APP_BASE_URL", "http://127.0.0.1:5000")
+
+@app.post("/billing/checkout")
+@login_required
+def billing_checkout():
+    lang = pick_lang(request)
+
+    cycle = (request.form.get("cycle") or "monthly").strip().lower()
+    if cycle not in ("monthly", "yearly"):
+        cycle = "monthly"
+
+    price_id = PRICE_MONTHLY if cycle == "monthly" else PRICE_YEARLY
+    if not price_id:
+        abort(500, "Missing Stripe price id env")
+
+    session = stripe.checkout.Session.create(
+        mode="subscription",
+        line_items=[{"price": price_id, "quantity": 1}],
+        success_url=f"{APP_BASE_URL}/billing/success?lang={lang}",
+        cancel_url=f"{APP_BASE_URL}/billing/cancel?lang={lang}",
+        client_reference_id=str(current_user.id),
+        metadata={"user_id": str(current_user.id), "cycle": cycle},
+    )
+
+    return redirect(session.url, code=303)
+
+import os
+import stripe
+from flask import request
+
+WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
+
+@app.post("/stripe/webhook")
+def stripe_webhook():
+    payload = request.data
+    sig_header = request.headers.get("Stripe-Signature")
+    endpoint_secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, WEBHOOK_SECRET)
+    except Exception:
+        return ("Bad signature", 400)
+
+    etype = event["type"]
+    obj = event["data"]["object"]
+
+    # 1) Checkout tamamlandı => pro aç
+    if etype == "checkout.session.completed":
+        session = obj
+
+        user_id = None
+        if session.get("client_reference_id"):
+            user_id = int(session["client_reference_id"])
+        elif session.get("metadata", {}).get("user_id"):
+            user_id = int(session["metadata"]["user_id"])
+
+        if user_id:
+            customer_id = session.get("customer")
+            subscription_id = session.get("subscription")
+
+            conn = get_db()
+            try:
+                conn.execute("""
+                    UPDATE users
+                    SET plan=?,
+                        subscription_status=?,
+                        stripe_customer_id=?,
+                        stripe_subscription_id=?
+                    WHERE id=?
+                """, ("pro", "active", customer_id, subscription_id, user_id))
+                conn.commit()
+            finally:
+                conn.close()
+
+    # 2) Subscription güncellendi (iptal, ödeme düşmesi, yeniden aktif vs.)
+    elif etype == "customer.subscription.updated":
+        sub = obj
+        status = sub.get("status")  # active, canceled, past_due, unpaid...
+        sub_id = sub.get("id")
+
+        # status'a göre plan
+        new_plan = "pro" if status in ("active", "trialing") else "free"
+
+        conn = get_db()
+        try:
+            conn.execute("""
+                UPDATE users
+                SET plan=?,
+                    subscription_status=?
+                WHERE stripe_subscription_id=?
+            """, (new_plan, status, sub_id))
+            conn.commit()
+        finally:
+            conn.close()
+
+    # 3) Subscription silindi (tam iptal) => free
+    elif etype == "customer.subscription.deleted":
+        sub = obj
+        sub_id = sub.get("id")
+
+        conn = get_db()
+        try:
+            conn.execute("""
+                UPDATE users
+                SET plan=?,
+                    subscription_status=?
+                WHERE stripe_subscription_id=?
+            """, ("free", "canceled", sub_id))
+            conn.commit()
+        finally:
+            conn.close()
+
+    return ("OK", 200)
+
+@app.post("/create-checkout-session")
+@login_required
+def create_checkout_session():
+    price_type = (request.form.get("type") or "monthly").strip().lower()  # monthly / yearly
+
+    if price_type == "monthly":
+        price_id = os.environ.get("STRIPE_PRICE_ID_PRO_MONTHLY")
+    elif price_type == "yearly":
+        price_id = os.environ.get("STRIPE_PRICE_ID_PRO_YEARLY")
+    else:
+        abort(400)
+
+    if not price_id:
+        # ENV'de price id yoksa erken hata
+        abort(500)
+
+    base_url = os.environ.get("APP_BASE_URL", "").rstrip("/")
+    if not base_url:
+        abort(500)
+
+    session = stripe.checkout.Session.create(
+        mode="subscription",
+        line_items=[{"price": price_id, "quantity": 1}],
+
+        # ✅ webhook’un user’ı bulması için:
+        client_reference_id=str(current_user.id),
+        metadata={"user_id": str(current_user.id)},
+
+        # ✅ success/cancel (lang taşıyalım)
+        success_url=f"{base_url}/billing-success?lang={pick_lang(request)}&session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{base_url}/billing-cancel?lang={pick_lang(request)}",
+
+        # Email zorunlu değil ama varsa iyi
+        customer_email=current_user.username,
+    )
+
+    return redirect(session.url, code=303)
 
 # ---------------- Admin: users ----------------
 @app.get("/admin/users")
