@@ -1320,9 +1320,7 @@ def create_checkout_session():
         success_url=os.environ.get("APP_BASE_URL") + "/billing-success",
         cancel_url=os.environ.get("APP_BASE_URL") + "/billing-cancel",
 
-        # Email zorunlu değil ama varsa iyi
-        client_reference_id=str(current_user.id),
-        metadata={"user_id": str(current_user.id)},
+        
     )
 
     return redirect(session.url, code=303)
