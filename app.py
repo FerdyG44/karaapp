@@ -155,6 +155,13 @@ I18N = {
         "date_to": "Bitiş",
         "download_csv": "CSV İndir",
 
+        "monthly": "Aylık",
+        "yearly": "Yıllık",
+        "monthly_desc": "Aylık abonelik (iptal edilebilir)",
+        "yearly_desc": "Yıllık abonelik (daha uygun)",
+        "choose_plan": "Plan seç",
+        "go_pro": "Pro’ya geç",
+
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
         "lang_en": "English",
@@ -229,6 +236,13 @@ I18N = {
         "date_to": "Till datum",
         "download_csv": "Ladda ner CSV", 
 
+        "monthly": "Månadsvis",
+        "yearly": "Årsvis",
+        "monthly_desc": "Månadsabonnemang (kan avslutas när som helst)",
+        "yearly_desc": "Årsabonnemang (bäst pris)",
+        "choose_plan": "Välj plan",
+        "go_pro": "Skaffa Pro",
+
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
         "lang_en": "English",
@@ -302,6 +316,13 @@ I18N = {
         "date_from": "From date",
         "date_to": "To date",
         "download_csv": "Download CSV",
+        
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "monthly_desc": "Monthly subscription (cancel anytime)",
+        "yearly_desc": "Yearly subscription (best value)",
+        "choose_plan": "Choose a plan",
+        "go_pro": "Go Pro",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
@@ -1162,6 +1183,23 @@ def billing_checkout():
 
     return redirect(session.url, code=303)
 
+@app.get("/billing-success")
+@login_required
+def billing_success():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+    flash(t.get("billing_success", "Ödeme alındı ✅ Planın birazdan Pro olarak güncellenecek."), "success")
+    return redirect(url_for("index", lang=lang))
+
+
+@app.get("/billing-cancel")
+@login_required
+def billing_cancel():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+    flash(t.get("billing_cancel", "Ödeme iptal edildi."), "error")
+    return redirect(url_for("index", lang=lang))
+
 import os
 import stripe
 from flask import request
@@ -1279,11 +1317,12 @@ def create_checkout_session():
         metadata={"user_id": str(current_user.id)},
 
         # ✅ success/cancel (lang taşıyalım)
-        success_url=f"{base_url}/billing-success?lang={pick_lang(request)}&session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{base_url}/billing-cancel?lang={pick_lang(request)}",
+        success_url=os.environ.get("APP_BASE_URL") + "/billing-success",
+        cancel_url=os.environ.get("APP_BASE_URL") + "/billing-cancel",
 
         # Email zorunlu değil ama varsa iyi
-        customer_email=current_user.username,
+        client_reference_id=str(current_user.id),
+        metadata={"user_id": str(current_user.id)},
     )
 
     return redirect(session.url, code=303)
