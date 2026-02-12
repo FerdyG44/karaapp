@@ -1128,7 +1128,7 @@ def admin_users():
     conn = get_db()
     try:
         users = conn.execute(
-            "SELECT id, username, is_admin, expires_at FROM users ORDER BY id DESC"
+            "SELECT id, username, is_admin, expires_at, plan FROM users ORDER BY id DESC"
         ).fetchall()
     finally:
         conn.close()
@@ -1197,6 +1197,42 @@ def admin_users_create():
         conn.close()
 
     flash(t.get("user_created"), "ok")
+    return redirect(url_for("admin_users", lang=lang))
+
+@app.post("/admin/users/plan")
+@login_required
+@admin_required
+def admin_users_plan():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+
+    user_id = int(request.form.get("user_id") or 0)
+    plan = (request.form.get("plan") or "free").strip().lower()
+
+    if plan not in ("free", "pro"):
+        flash(t.get("invalid_plan", "Invalid plan"), "error")
+        return redirect(url_for("admin_users", lang=lang))
+
+    # kendini FREE yapmayı istersen engelleyebilirsin (opsiyonel)
+    # if user_id == current_user.id and plan == "free":
+    #     flash("You cannot downgrade yourself.", "error")
+    #     return redirect(url_for("admin_users", lang=lang))
+
+    try:
+        uid = int(user_id)
+    except Exception:
+        flash(t.get("invalid_user", "Invalid user"), "error")
+        return redirect(url_for("admin_users", lang=lang))
+
+
+    conn = get_db()
+    try:
+        conn.execute("UPDATE users SET plan = ? WHERE id = ?", (plan, user_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+    flash(t.get("plan_updated", "Plan updated"), "ok")
     return redirect(url_for("admin_users", lang=lang))
 
 @app.post("/admin/users/<int:user_id>/delete")

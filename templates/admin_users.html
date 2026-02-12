@@ -133,6 +133,23 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn-danger" type="submit">{{ t.get("delete","Sil") }}</button>
                     </form>
+              
+                    <form method="post"
+      action="{{ url_for('admin_users_plan', lang=lang) }}"
+      style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="user_id" value="{{ u['id'] }}">
+
+  <select name="plan" class="inp" style="width:auto; padding:6px 10px; border-radius:999px;">
+    <option value="free" {{ 'selected' if (u['plan'] or 'free')=='free' else '' }}>Free</option>
+    <option value="pro"  {{ 'selected' if (u['plan'] or 'free')=='pro'  else '' }}>Pro</option>
+  </select>
+
+  <button class="btn-outline" type="submit" style="padding:6px 10px;">
+    {{ t.get("update","Güncelle") }}
+  </button>
+</form>
+
                 <form method="post" action="{{ url_for('admin_unlock_login', lang=lang) }}" style="display:inline;">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="username" value="{{ u['username'] }}">
