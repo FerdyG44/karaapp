@@ -155,12 +155,17 @@ I18N = {
         "date_to": "Bitiş",
         "download_csv": "CSV İndir",
 
-        "monthly": "Aylık",
-        "yearly": "Yıllık",
+        
         "monthly_desc": "Aylık abonelik (iptal edilebilir)",
         "yearly_desc": "Yıllık abonelik (daha uygun)",
         "choose_plan": "Plan seç",
         "go_pro": "Pro’ya geç",
+        "pro_subscription_title": "Pro Abonelik",
+        "pro_subscription_desc": "CSV/Excel indirme gibi Pro özellikler için abonelik başlat.",
+        "billing_note": "Ödeme Stripe üzerinden güvenli şekilde alınır.",
+        "monthly": "Aylık",
+        "yearly": "Yıllık",
+        "back": "Geri",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
@@ -236,12 +241,17 @@ I18N = {
         "date_to": "Till datum",
         "download_csv": "Ladda ner CSV", 
 
-        "monthly": "Månadsvis",
-        "yearly": "Årsvis",
+        
         "monthly_desc": "Månadsabonnemang (kan avslutas när som helst)",
         "yearly_desc": "Årsabonnemang (bäst pris)",
         "choose_plan": "Välj plan",
         "go_pro": "Skaffa Pro",
+        "pro_subscription_title": "Pro-abonnemang",
+        "pro_subscription_desc": "Starta en prenumeration för Pro-funktioner som CSV/Excel-export.",
+        "billing_note": "Betalningen hanteras säkert via Stripe.",
+        "monthly": "Månadsvis",
+        "yearly": "Årsvis",
+        "back": "Tillbaka",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
@@ -317,12 +327,17 @@ I18N = {
         "date_to": "To date",
         "download_csv": "Download CSV",
         
-        "monthly": "Monthly",
-        "yearly": "Yearly",
+        
         "monthly_desc": "Monthly subscription (cancel anytime)",
         "yearly_desc": "Yearly subscription (best value)",
         "choose_plan": "Choose a plan",
         "go_pro": "Go Pro",
+        "pro_subscription_title": "Pro Subscription",
+        "pro_subscription_desc": "Start a subscription to unlock Pro features like CSV/Excel export.",
+        "billing_note": "Payment is securely processed by Stripe.",
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "back": "Back",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
