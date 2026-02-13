@@ -189,6 +189,17 @@ I18N = {
         "logout": "Çıkış",
         "manage_users": "Kullanıcıları yönet",
         "all_records": "Tüm kayıtlar",
+        
+        "account": "Hesabım",
+        "username": "Kullanıcı adı",
+        "plan": "Plan",
+        "expires": "Bitiş",
+        "export_access": "Export erişimi",
+        "open": "Açık",
+        "closed": "Kapalı",
+        "back": "Geri",
+        "settings": "Ayarlar",
+        
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
@@ -298,6 +309,16 @@ I18N = {
         "logout": "Logga ut",
         "manage_users": "Hantera användare",
         "all_records": "Alla poster",
+        
+        "account": "Konto",
+        "username": "Användarnamn",
+        "plan": "Plan",
+        "expires": "Gäller till",
+        "export_access": "Exportåtkomst",
+        "open": "Öppen",
+        "closed": "Stängd",
+        "back": "Tillbaka",
+        "settings": "Inställningar",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
@@ -407,6 +428,16 @@ I18N = {
         "logout": "Logout",
         "manage_users": "Manage users",
         "all_records": "All records",
+
+        "account": "Account",
+        "username": "Username",
+        "plan": "Plan",
+        "expires": "Expires",
+        "export_access": "Export access",
+        "open": "Open",
+        "closed": "Closed",
+        "back": "Back",
+        "settings": "Settings", 
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",

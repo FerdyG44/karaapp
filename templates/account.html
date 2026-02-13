@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ t.get("account","Hesabım") }} — {{ t.get("title","KaraApp") }}</title>
+  <title>{{ t.get("account","Account") }} — {{ t.get("title","KaraApp") }}</title>
   <style>
     body{font-family:system-ui;margin:0;background:#f5f7fb}
     .wrap{max-width:720px;margin:0 auto;padding:24px}
@@ -11,53 +11,54 @@
     .pill{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid #e5e7eb}
     .pill.pro{background:#ecfdf5;border-color:#bbf7d0}
     .pill.free{background:#f3f4f6}
-    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .row{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
     .btn-outline{padding:10px 14px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#111827;font-weight:900;cursor:pointer;text-decoration:none}
-    .muted{color:#6b7280;font-size:13px;margin-top:10px}
+    .muted{color:#6b7280;font-size:13px}
     .k{font-weight:900}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h2 style="margin:0 0 8px 0;">👤 {{ t.get("account","Hesabım") }}</h2>
+      <h2 style="margin:0 0 8px 0;">👤 {{ t.get("account","Account") }}</h2>
+
+      {% set p = (current_user.plan or 'free') %}
+      {% set has_export = (p != 'free') %}
 
       <div class="row">
-        <div><span class="k">{{ t.get("username","Kullanıcı adı") }}:</span> {{ current_user.username }}</div>
+        <div>
+          <span class="k">{{ t.get("username","Username") }}:</span>
+          {{ current_user.username }}
+        </div>
       </div>
-      <div>
-        <b>{{ t.get("plan","Plan") }}:</b> {{ current_user.plan|upper }}</div>
-    <div>
-        <b>{{ t.get("expires","Bitiş") }}:</b> {{ current_user.expires_at or "—" }}</div>
 
       <div class="row">
         <div>
           <span class="k">{{ t.get("plan","Plan") }}:</span>
-          {% set p = (current_user.plan or 'free') %}
           <span class="pill {{ 'pro' if p=='pro' else 'free' }}">{{ p|upper }}</span>
         </div>
+
         <div>
-          <span class="k">{{ t.get("expires_at","Bitiş") }}:</span>
-          <span class="muted" style="margin:0;">{{ current_user.expires_at or "—" }}</span>
+          <span class="k">{{ t.get("expires","Expires") }}:</span>
+          <span class="muted">{{ current_user.expires_at or "—" }}</span>
         </div>
       </div>
 
       <div class="row">
-        <div><b>{{ t.get("export_access","Export erişimi") }}:</b>
-  {% if current_user.plan == "pro" %}
-    ✅ {{ t.get("enabled","Açık") }}
-  {% else %}
-    ❌ {{ t.get("disabled","Kapalı") }}
-  {% endif %}
-</div>
+        <div>
+          <span class="k">{{ t.get("export_access","Export access") }}:</span>
+          {% if has_export %}
+            ✅ {{ t.get("open","Open") }}
+          {% else %}
+            ❌ {{ t.get("closed","Closed") }}
+          {% endif %}
+        </div>
       </div>
 
-
-
       <div class="row" style="margin-top:16px;">
-        <a class="btn-outline" href="{{ url_for('settings', lang=lang) }}">⚙️ {{ t.get("settings","Ayarlar") }}</a>
-        <a class="btn-outline" href="{{ url_for('index', lang=lang) }}">← {{ t.get("back","Geri") }}</a>
-    </div>
+        <a class="btn-outline" href="{{ url_for('settings', lang=lang) }}">⚙️ {{ t.get("settings","Settings") }}</a>
+        <a class="btn-outline" href="{{ url_for('index', lang=lang) }}">← {{ t.get("back","Back") }}</a>
+      </div>
     </div>
   </div>
 </body>
