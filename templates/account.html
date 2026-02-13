@@ -25,6 +25,10 @@
       <div class="row">
         <div><span class="k">{{ t.get("username","Kullanıcı adı") }}:</span> {{ current_user.username }}</div>
       </div>
+      <div>
+        <b>{{ t.get("plan","Plan") }}:</b> {{ current_user.plan|upper }}</div>
+    <div>
+        <b>{{ t.get("expires","Bitiş") }}:</b> {{ current_user.expires_at or "—" }}</div>
 
       <div class="row">
         <div>
@@ -39,24 +43,21 @@
       </div>
 
       <div class="row">
-        <div>
-          <span class="k">{{ t.get("export_access","Export erişimi") }}:</span>
-          {% if export_allowed %}
-            ✅ {{ t.get("enabled","Açık") }}
-          {% else %}
-            ❌ {{ t.get("disabled","Kapalı") }}
-          {% endif %}
-        </div>
+        <div><b>{{ t.get("export_access","Export erişimi") }}:</b>
+  {% if current_user.plan == "pro" %}
+    ✅ {{ t.get("enabled","Açık") }}
+  {% else %}
+    ❌ {{ t.get("disabled","Kapalı") }}
+  {% endif %}
+</div>
       </div>
 
-      <div class="muted">
-        {{ t.get("account_note","Plan yükseltme şimdilik admin tarafından yapılır. (Stripe daha sonra)") }}
-      </div>
+
 
       <div class="row" style="margin-top:16px;">
         <a class="btn-outline" href="{{ url_for('settings', lang=lang) }}">⚙️ {{ t.get("settings","Ayarlar") }}</a>
         <a class="btn-outline" href="{{ url_for('index', lang=lang) }}">← {{ t.get("back","Geri") }}</a>
-      </div>
+    </div>
     </div>
   </div>
 </body>

@@ -19,8 +19,8 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h2 style="margin:0 0 8px 0;">⚙️ {{ t.get("settings","Ayarlar") }}</h2>
-      <div class="muted">{{ t.get("settings_desc","Görünüm ve varsayılan tercihlerini ayarla.") }}</div>
+      <h2>⚙️ {{ t.get("settings","Ayarlar") }}</h2>
+        <div class="muted">{{ t.get("settings_desc","Görünüm ve varsayılan tercihlerini ayarla.") }}</div>
 
       <form method="post" action="{{ url_for('settings_post', lang=lang) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -36,7 +36,7 @@
           </div>
 
           <div>
-            <label>{{ t.get("default_range","Varsayılan tarih aralığı") }}</label><br>
+            <label>{{ t.get("default_range","Varsayılan Aralık") }}</label><br>
             <select class="inp" name="default_range_days">
               {% for val, label in ranges %}
                 <option value="{{ val }}" {{ 'selected' if (current_user.default_range_days|string)==val else '' }}>{{ label }}</option>
@@ -46,8 +46,8 @@
         </div>
 
         <div class="row" style="margin-top:16px;">
-          <button class="btn" type="submit">✅ {{ t.get("save","Kaydet") }}</button>
-          <a class="btn-outline" href="{{ url_for('index', lang=lang) }}">← {{ t.get("back","Geri") }}</a>
+          <button type="submit">✅ {{ t.get("save","Kaydet") }}</button>
+            <a class="btn-outline" href="{{ url_for('index', lang=lang) }}">← {{ t.get("back","Geri") }}</a>
         </div>
       </form>
     </div>

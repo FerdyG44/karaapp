@@ -223,8 +223,13 @@
       <!-- ACCOUNT/SETTINGS -->
        <div class="header-group">
 
-      <a class="btn-outline" href="{{ url_for('account', lang=lang) }}">👤 {{ t.get("account","Hesabım") }}</a>
-      <a class="btn-outline" href="{{ url_for('settings', lang=lang) }}">⚙️ {{ t.get("settings","Ayarlar") }}</a>
+<a class="btn-outline" href="{{ url_for('account', lang=lang) }}">
+  👤 {{ t.get("account","Hesabım") }}
+</a>
+
+<a class="btn-outline" href="{{ url_for('settings', lang=lang) }}">
+  ⚙️ {{ t.get("settings","Ayarlar") }}
+</a>
       </div>
     </div>
   </div>
@@ -252,31 +257,28 @@
         href="{{ url_for('index', lang=lang, range='365', all=('1' if show_all else None)) }}">365</a>
 
       <a class="btn-outline {{ 'active' if selected_range=='' else '' }}"
-        href="{{ url_for('index', lang=lang, all=('1' if show_all else None)) }}">
-          {{ t.get("all","Tümü") }}
-      </a>  
-
-          {% if current_user.is_admin %}
-          <a class="btn-outline" href="{{ url_for('index', lang=lang, all='1') }}">
-          {{ t.get("all_records","All records") }}
-      </a>
-
-        <a class="btn-outline"
-          href="{{ url_for('admin_users', lang=lang) }}">
+   href="{{ url_for('index', lang=lang, all=('1' if show_all else None)) }}">
+  {{ t.get("all","Tümü") }}
+</a>
 
 
-      {{ t.get("manage_users","Kullanıcıları yönet") }}
-
-        </a>
-          {% endif %}
+{% if current_user.is_admin %}
+  <a class="btn-outline" href="{{ url_for('index', lang=lang, all='1') }}">
+    {{ t.get("all_records","All records") }}
+  </a>
+        <a class="btn-outline" href="{{ url_for('admin_users', lang=lang) }}">
+    {{ t.get("manage_users","Manage users") }}
+  </a>
+{% endif %}
 
       {% if current_user.plan == 'free' %}
       <a class="btn-outline" href="{{ url_for('billing', lang=lang) }}">
         ⭐ {{ t.get("go_pro","Pro’ya geç") }}
       </a>
       {% endif %}
-        <a class="btn-outline" href="{{ url_for('logout', lang=lang) }}">{{ t.get("logout","Çıkış") }}</a>
-        </a>
+        <a class="btn-outline" href="{{ url_for('logout', lang=lang) }}">
+  {{ t.get("logout","Çıkış") }}
+</a>
       </div>
     </div>
   </div>
