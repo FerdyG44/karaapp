@@ -220,10 +220,18 @@
         <a class="pill {{ 'active' if lang=='en' else '' }}" href="{{ url_for('index', lang='en', all=('1' if show_all else None)) }}">🇬🇧 English</a>
       </div>
 
+      <!-- ACCOUNT/SETTINGS -->
+       <div class="header-group">
+
+      <a class="btn-outline" href="{{ url_for('account', lang=lang) }}">👤 {{ t.get("account","Hesabım") }}</a>
+      <a class="btn-outline" href="{{ url_for('settings', lang=lang) }}">⚙️ {{ t.get("settings","Ayarlar") }}</a>
+      </div>
+    </div>
+  </div>
+</div>
       <!-- ACTIONS -->
       <div class="header-group">
 
- 
         <a class="btn-outline"
    href="{{ url_for('export', lang=lang, fmt='csv', all=('1' if show_all else None), start=start, end=end, range=range_days) }}">
   ⬇️ CSV
@@ -262,14 +270,11 @@
         </a>
           {% endif %}
 
-        {% if current_user.plan == 'free' %}
-      <a class="btn-outline"
-      style="background:#2563eb;color:#fff;border-color:#2563eb"
-      href="{{ url_for('billing', lang=lang) }}">
-        ⭐ Pro’ya geç
+      {% if current_user.plan == 'free' %}
+      <a class="btn-outline" href="{{ url_for('billing', lang=lang) }}">
+        ⭐ {{ t.get("go_pro","Pro’ya geç") }}
       </a>
-        {% endif %}
-
+      {% endif %}
         <a class="btn-outline" href="{{ url_for('logout', lang=lang) }}">{{ t.get("logout","Çıkış") }}</a>
         </a>
       </div>
@@ -346,7 +351,7 @@
             <form method="post"
                   action="{{ url_for('delete_record', record_id=r['id'], lang=lang) }}"
                   style="display:inline"
-                  onsubmit="return confirm('{{ t.get('confirm_delete','Silinsin mi?') }}')">
+                  onsubmit='return confirm("{{ t.get("confirm_delete","Silinsin mi?") }}")'>
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit"
                       title="{{ t.get('delete','Sil') }}"

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="{{ lang or 'tr' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t.get("settings","Ayarlar") }} — {{ t.get("title","KaraApp") }}</title>
+  <style>
+    body{font-family:system-ui;margin:0;background:#f5f7fb}
+    .wrap{max-width:720px;margin:0 auto;padding:24px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+    .inp{padding:10px 12px;border-radius:12px;border:1px solid #e5e7eb;min-width:220px}
+    .btn{padding:10px 14px;border-radius:999px;border:1px solid #e5e7eb;background:#2563eb;color:#fff;font-weight:900;cursor:pointer}
+    .btn-outline{padding:10px 14px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#111827;font-weight:900;cursor:pointer;text-decoration:none}
+    .muted{color:#6b7280;font-size:13px;margin-top:10px}
+    label{font-weight:800;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2 style="margin:0 0 8px 0;">⚙️ {{ t.get("settings","Ayarlar") }}</h2>
+      <div class="muted">{{ t.get("settings_desc","Görünüm ve varsayılan tercihlerini ayarla.") }}</div>
+
+      <form method="post" action="{{ url_for('settings_post', lang=lang) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row">
+          <div>
+            <label>{{ t.get("currency","Para birimi") }}</label><br>
+            <select class="inp" name="currency">
+              {% for c in currencies %}
+                <option value="{{ c }}" {{ 'selected' if (current_user.currency or 'SEK')==c else '' }}>{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label>{{ t.get("default_range","Varsayılan tarih aralığı") }}</label><br>
+            <select class="inp" name="default_range_days">
+              {% for val, label in ranges %}
+                <option value="{{ val }}" {{ 'selected' if (current_user.default_range_days|string)==val else '' }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:16px;">
+          <button class="btn" type="submit">✅ {{ t.get("save","Kaydet") }}</button>
+          <a class="btn-outline" href="{{ url_for('index', lang=lang) }}">← {{ t.get("back","Geri") }}</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

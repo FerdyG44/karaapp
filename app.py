@@ -167,6 +167,17 @@ I18N = {
         "yearly": "Yıllık",
         "back": "Geri",
 
+        "settings": "Ayarlar",
+        "settings_title": "Ayarlar",
+        "default_range": "Varsayılan Aralık",
+        "default_range_desc": "Dashboard açıldığında otomatik seçilecek tarih aralığı.",
+        "range_all": "Tümü",
+        "range_30": "Son 30 gün",
+        "range_90": "Son 90 gün",
+        "range_365": "Son 365 gün",
+        "save": "Kaydet",
+        "updated": "Güncellendi",
+
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
         "lang_en": "English",
@@ -253,6 +264,17 @@ I18N = {
         "yearly": "Årsvis",
         "back": "Tillbaka",
 
+        "settings": "Inställningar",
+        "settings_title": "Inställningar",
+        "default_range": "Standardintervall",
+        "default_range_desc": "Datumintervall som väljs automatiskt när dashboarden öppnas.",
+        "range_all": "Alla",
+        "range_30": "Senaste 30 dagar",
+        "range_90": "Senaste 90 dagar",
+        "range_365": "Senaste 365 dagar",
+        "save": "Spara",
+        "updated": "Uppdaterad",
+
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
         "lang_en": "English",
@@ -338,6 +360,17 @@ I18N = {
         "monthly": "Monthly",
         "yearly": "Yearly",
         "back": "Back",
+
+        "settings": "Settings",
+        "settings_title": "Settings",
+        "default_range": "Default Range",
+        "default_range_desc": "Date range that is selected automatically when the dashboard opens.",
+        "range_all": "All",
+        "range_30": "Last 30 days",
+        "range_90": "Last 90 days",
+        "range_365": "Last 365 days",
+        "save": "Save",
+        "updated": "Updated",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
@@ -542,13 +575,16 @@ login_manager.login_view = "login"
 
 
 class User(UserMixin):
-    def __init__(self, id, username, password_hash, is_admin=0, expires_at=None, plan="free"):
+    def __init__(self, id, username, password_hash, is_admin=0, expires_at=None, plan="free",
+                 currency="SEK", default_range_days=30):
         self.id = id
         self.username = username
         self.password_hash = password_hash
         self.is_admin = is_admin
         self.expires_at = expires_at
         self.plan = plan or "free"
+        self.currency = currency or "SEK"
+        self.default_range_days = default_range_days if default_range_days is not None else 30
         
     def is_expired(self) -> bool:
         if not self.expires_at:
@@ -573,7 +609,7 @@ def get_user_by_id(user_id: int):
     conn = get_db()
     try:
         row = conn.execute(
-            "SELECT id, username, password_hash, is_admin, expires_at, plan FROM users WHERE id = ?",
+            "SELECT id, username, password_hash, is_admin, expires_at, plan, currency, default_range_days FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
     finally:
@@ -589,6 +625,8 @@ def get_user_by_id(user_id: int):
         is_admin=row["is_admin"],
         expires_at=row["expires_at"],
         plan=row["plan"],
+        currency=row["currency"],
+        default_range_days=row["default_range_days"],
     )
 
 def get_user_by_username(username):
@@ -722,10 +760,17 @@ def index():
     currency = currency_for_lang(lang)
 
     show_all = (request.args.get("all") == "1") and getattr(current_user, "is_admin", False)
-
-    # --- A4: Range filtresi ---
-    range_days = (request.args.get("range") or "").strip()
     
+    # --- A4: Range filtresi + user default ---
+    selected_range = (request.args.get("range") or "").strip()
+
+    # URL’de range yoksa user default’u kullan
+    if selected_range == "":
+        dr = getattr(current_user, "default_range_days", 30)
+        selected_range = "" if dr == 0 else str(dr)
+
+    range_days = selected_range
+
     start = None
     end = None
 
@@ -885,6 +930,10 @@ def index():
                 (int(current_user.id),)
             ).fetchall()
 
+
+        # ... burada senin if show_all / else sorguların aynı kalacak ...
+        # totals, daily_raw, monthly_raw hesapladığın yerler aynı
+
         total_sales = float(totals["s"] or 0)
         total_expense = float(totals["e"] or 0)
         total_profit = float(totals["p"] or 0)
@@ -907,9 +956,8 @@ def index():
             start=start,
             end=end,
             range_days=range_days,
-            selected_range = (request.args.get("range") or "").strip()
-        )
-
+            selected_range=selected_range,
+    )
     finally:
         conn.close()
 
@@ -1340,6 +1388,77 @@ def create_checkout_session():
 
     return redirect(session.url, code=303)
 
+@app.get("/settings")
+@login_required
+def settings():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+
+    # seçenekler
+    currencies = ["SEK", "TRY", "USD", "EUR"]
+    ranges = [("30","30"), ("90","90"), ("365","365"), ("0", t.get("all","Tümü"))]
+
+    return render_template(
+        "settings.html",
+        lang=lang,
+        t=t,
+        currencies=currencies,
+        ranges=ranges,
+    )
+
+@app.post("/settings")
+@login_required
+def settings_post():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+
+    currency = (request.form.get("currency") or "").strip().upper()
+    default_range = (request.form.get("default_range_days") or "30").strip()
+
+    if currency not in ("SEK", "TRY", "USD", "EUR"):
+        flash(t.get("invalid_currency", "Invalid currency"), "error")
+        return redirect(url_for("settings", lang=lang))
+
+    try:
+        dr = int(default_range)
+        if dr not in (0, 30, 90, 365):
+            raise ValueError
+    except Exception:
+        flash(t.get("invalid_range", "Invalid range"), "error")
+        return redirect(url_for("settings", lang=lang))
+
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE users SET currency=?, default_range_days=? WHERE id=?",
+            (currency, dr, int(current_user.id)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    # login session user objesini güncellemek için (opsiyonel)
+    current_user.currency = currency
+    current_user.default_range_days = dr
+
+    flash(t.get("saved","Kaydedildi"), "success")
+    return redirect(url_for("settings", lang=lang))
+
+@app.get("/account")
+@login_required
+def account():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+
+    export_allowed = (getattr(current_user, "plan", "free") == "pro")
+
+    return render_template(
+        "account.html",
+        lang=lang,
+        t=t,
+        export_allowed=export_allowed,
+    )
+
 # ---------------- Admin: users ----------------
 @app.get("/admin/users")
 @login_required
@@ -1352,7 +1471,7 @@ def admin_users():
     conn = get_db()
     try:
         users = conn.execute(
-            "SELECT id, username, is_admin, expires_at, plan FROM users ORDER BY id DESC"
+            "SELECT id, username, is_admin, expires_at, plan, currency, default_range_days FROM users ORDER BY id DESC"
         ).fetchall()
     finally:
         conn.close()
