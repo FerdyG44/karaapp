@@ -1455,15 +1455,29 @@ def create_checkout_session():
 
     return redirect(session.url, code=303)
 
+# --- Settings: GET ---
 @app.get("/settings")
 @login_required
 def settings():
     lang = pick_lang(request)
     t = I18N.get(lang, I18N["tr"])
 
-    # seçenekler
-    currencies = ["SEK", "TRY", "USD", "EUR"]
-    ranges = [("30","30"), ("90","90"), ("365","365"), ("0", t.get("all","Tümü"))]
+    # kullanılabilecek para birimleri (istediğin ekle/çıkar)
+    currencies = ["SEK", "USD", "EUR", "TRY"]
+
+    # ranges: (value, label) ; label'ları I18N ile çeviriyorum
+    ranges = [
+        ("0", t.get("all","Tümü")),
+        ("30", "30"),
+        ("90", "90"),
+        ("365", "365"),
+    ]
+
+    # Eğer DB'de kolon yoksa fallback
+    curr = getattr(current_user, "currency", "SEK") or "SEK"
+    dr = getattr(current_user, "default_range_days", 30)
+    if dr is None:
+        dr = 30
 
     return render_template(
         "settings.html",
@@ -1471,44 +1485,48 @@ def settings():
         t=t,
         currencies=currencies,
         ranges=ranges,
+        # template'de current_user zaten kullanılıyor; yine de geçerli değer
+        current_currency=curr,
+        current_range=str(dr)
     )
 
+
+# --- Settings: POST (form action'ın url_for('settings_post') bunu bulacak) ---
 @app.post("/settings")
 @login_required
 def settings_post():
     lang = pick_lang(request)
     t = I18N.get(lang, I18N["tr"])
 
-    currency = (request.form.get("currency") or "").strip().upper()
-    default_range = (request.form.get("default_range_days") or "30").strip()
-
-    if currency not in ("SEK", "TRY", "USD", "EUR"):
-        flash(t.get("invalid_currency", "Invalid currency"), "error")
-        return redirect(url_for("settings", lang=lang))
-
+    # form verileri
+    new_currency = (request.form.get("currency") or "").strip().upper()
+    new_range = request.form.get("default_range_days", "30")
     try:
-        dr = int(default_range)
-        if dr not in (0, 30, 90, 365):
-            raise ValueError
+        new_range_int = int(new_range)
     except Exception:
-        flash(t.get("invalid_range", "Invalid range"), "error")
-        return redirect(url_for("settings", lang=lang))
+        new_range_int = 30
 
+    # DB update
     conn = get_db()
     try:
+        # Kullanıcı tablosunda kolon isimleri `currency` ve `default_range_days` olmalı.
+        # Eğer farklıysa burada uygun isimleri koy.
         conn.execute(
-            "UPDATE users SET currency=?, default_range_days=? WHERE id=?",
-            (currency, dr, int(current_user.id)),
+            "UPDATE users SET currency = ?, default_range_days = ? WHERE id = ?",
+            (new_currency, new_range_int, int(current_user.id))
         )
         conn.commit()
     finally:
         conn.close()
 
-    # login session user objesini güncellemek için (opsiyonel)
-    current_user.currency = currency
-    current_user.default_range_days = dr
+    # current_user objesini güncelle (oturum içindeyken sayfa hemen yeni değeri göstersin diye)
+    try:
+        setattr(current_user, "currency", new_currency)
+        setattr(current_user, "default_range_days", new_range_int)
+    except Exception:
+        pass
 
-    flash(t.get("saved","Kaydedildi"), "success")
+    # geri settings sayfasına dön
     return redirect(url_for("settings", lang=lang))
 
 @app.get("/account")
