@@ -199,6 +199,10 @@ I18N = {
         "closed": "Kapalı",
         "back": "Geri",
         "settings": "Ayarlar",
+
+        "today_sales": "Bugünkü satış",
+        "today_expense": "Bugünkü gider",
+        "today_profit": "Bugünkü kâr",
         
 
         "lang_tr": "Türkçe",
@@ -320,6 +324,10 @@ I18N = {
         "back": "Tillbaka",
         "settings": "Inställningar",
 
+        "today_sales": "Dagens försäljning",
+        "today_expense": "Dagens kostnad",
+        "today_profit": "Dagens vinst",
+
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
         "lang_en": "English",
@@ -438,6 +446,10 @@ I18N = {
         "closed": "Closed",
         "back": "Back",
         "settings": "Settings", 
+
+        "today_sales": "Today's sales",
+        "today_expense": "Today's expense",
+        "today_profit": "Today's profit",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",

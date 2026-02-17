@@ -284,21 +284,53 @@
   </div>
 </div>
 
-  <!-- ===== KPI ===== -->
-  <div class="grid">
-    <div class="card">
-      <div>{{ t.get("total_sales","Toplam satış") }}</div>
-      <div class="kpi">{{ total_sales }} {{ currency }}</div>
-    </div>
-    <div class="card">
-      <div>{{ t.get("total_expense","Toplam gider") }}</div>
-      <div class="kpi">{{ total_expense }} {{ currency }}</div>
-    </div>
-    <div class="card">
-      <div>{{ t.get("total_profit","Toplam kâr") }}</div>
-      <div class="kpi profit">{{ total_profit }} {{ currency }}</div>
-    </div>
+<!-- TODAY SUMMARY -->
+<div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#0ea5e9,#22c55e);color:white;">
+  <div style="font-size:13px;opacity:.9;">
+    📅 {{ today_date }}
   </div>
+
+  <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px">
+
+    <div>
+      <div style="font-size:12px;opacity:.9">{{ t.get("today_sales","Bugünkü satış") }}</div>
+      <div style="font-size:26px;font-weight:900">
+        {{ today_sales }} {{ currency }}
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;opacity:.9">{{ t.get("today_expense","Bugünkü gider") }}</div>
+      <div style="font-size:26px;font-weight:900">
+        {{ today_expense }} {{ currency }}
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;opacity:.9">{{ t.get("today_profit","Bugünkü kâr") }}</div>
+      <div style="font-size:30px;font-weight:900">
+        {{ today_profit }} {{ currency }}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== KPI ===== -->
+<div class="grid">
+  <div class="card">
+    <div>{{ t.get("total_sales","Toplam satış") }}</div>
+    <div class="kpi">{{ total_sales }} {{ currency }}</div>
+  </div>
+  <div class="card">
+    <div>{{ t.get("total_expense","Toplam gider") }}</div>
+    <div class="kpi">{{ total_expense }} {{ currency }}</div>
+  </div>
+  <div class="card">
+    <div>{{ t.get("total_profit","Toplam kâr") }}</div>
+    <div class="kpi profit">{{ total_profit }} {{ currency }}</div>
+  </div>
+</div>
 
   <!-- ===== FORM ===== -->
   <div class="card" style="margin-top:20px">
