@@ -827,20 +827,16 @@ def index():
     currency = currency_for_lang(lang)
 
     show_all = (request.args.get("all") == "1") and getattr(current_user, "is_admin", False)
-    
-    # --- A4: Range filtresi + user default ---
+
+    # --- Range filtresi + user default ---
     selected_range = (request.args.get("range") or "").strip()
-
-    # URL’de range yoksa user default’u kullan
     if selected_range == "":
-        dr = getattr(current_user, "default_range_days", 30)
+        dr = getattr(current_user, "default_range_days", 30) or 0
         selected_range = "" if dr == 0 else str(dr)
-
     range_days = selected_range
 
     start = None
     end = None
-
     if range_days.isdigit():
         d = int(range_days)
         if d > 0:
@@ -849,6 +845,30 @@ def index():
 
     conn = get_db()
     try:
+        # --- Today summary (user-specific) ---
+        today = datetime.now().strftime("%Y-%m-%d")
+        try:
+            # Eğer users tablonda row factory kullanıyorsan dict tarzı sonuç gelir; değilse index ile kullan
+            today_row = conn.execute(
+                """
+                SELECT
+                    COALESCE(SUM(sales),0) AS s,
+                    COALESCE(SUM(expense),0) AS e,
+                    COALESCE(SUM(profit),0) AS p
+                FROM records
+                WHERE user_id = ? AND day = ?
+                """,
+                (int(current_user.id), today)
+            ).fetchone()
+        except Exception:
+            # boşsa sıfırla
+            today_row = {"s": 0, "e": 0, "p": 0}
+
+        today_sales = float((today_row["s"] if isinstance(today_row, dict) else today_row[0]) or 0)
+        today_expense = float((today_row["e"] if isinstance(today_row, dict) else today_row[1]) or 0)
+        today_profit = float((today_row["p"] if isinstance(today_row, dict) else today_row[2]) or 0)
+
+        # --- Asıl veri sorguları (show_all / user) ---
         if show_all:
             if start and end:
                 rows = conn.execute(
@@ -997,10 +1017,6 @@ def index():
                 (int(current_user.id),)
             ).fetchall()
 
-
-        # ... burada senin if show_all / else sorguların aynı kalacak ...
-        # totals, daily_raw, monthly_raw hesapladığın yerler aynı
-
         total_sales = float(totals["s"] or 0)
         total_expense = float(totals["e"] or 0)
         total_profit = float(totals["p"] or 0)
@@ -1020,11 +1036,18 @@ def index():
             total_sales=round(total_sales, 2),
             total_expense=round(total_expense, 2),
             total_profit=round(total_profit, 2),
+
+            today_sales=round(today_sales, 2),
+            today_expense=round(today_expense, 2),
+            today_profit=round(today_profit, 2),
+            today_date=today,
+
             start=start,
             end=end,
             range_days=range_days,
-            selected_range=selected_range,
-    )
+            selected_range=selected_range
+        )
+
     finally:
         conn.close()
 
@@ -1498,35 +1521,38 @@ def settings_post():
     lang = pick_lang(request)
     t = I18N.get(lang, I18N["tr"])
 
-    # form verileri
+    # form alanları
     new_currency = (request.form.get("currency") or "").strip().upper()
-    new_range = request.form.get("default_range_days", "30")
     try:
-        new_range_int = int(new_range)
-    except Exception:
-        new_range_int = 30
+        new_range = int(request.form.get("default_range_days") or 0)
+    except ValueError:
+        new_range = 0
 
-    # DB update
+    # validate basitçe: currency boş olmasın (isteğe göre daha sıkı yap)
+    if not new_currency:
+        flash(t.get("need_currency", "Lütfen para birimi seçin."), "error")
+        return redirect(url_for("settings", lang=lang))
+
+    # DB'ye yaz
     conn = get_db()
     try:
-        # Kullanıcı tablosunda kolon isimleri `currency` ve `default_range_days` olmalı.
-        # Eğer farklıysa burada uygun isimleri koy.
         conn.execute(
             "UPDATE users SET currency = ?, default_range_days = ? WHERE id = ?",
-            (new_currency, new_range_int, int(current_user.id))
+            (new_currency, new_range, int(current_user.id))
         )
         conn.commit()
     finally:
         conn.close()
 
-    # current_user objesini güncelle (oturum içindeyken sayfa hemen yeni değeri göstersin diye)
+    # oturumdaki current_user objesini hemen güncelle (böylece logout/login yapmana gerek kalmaz)
     try:
         setattr(current_user, "currency", new_currency)
-        setattr(current_user, "default_range_days", new_range_int)
+        setattr(current_user, "default_range_days", new_range)
     except Exception:
+        # bazen current_user proxy nesnesi attribute set'i izin vermez; bu durumda kullanıcıya bildir.
         pass
 
-    # geri settings sayfasına dön
+    flash(t.get("saved", "Kaydedildi."), "success")
     return redirect(url_for("settings", lang=lang))
 
 @app.get("/account")
