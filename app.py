@@ -937,7 +937,7 @@ def logout():
 def index():
     lang = pick_lang(request)
     t = I18N.get(lang, I18N["tr"])
-    currency = currency_for_lang(lang)
+    currency = getattr(current_user, "currency", None) or currency_for_lang(lang)
 
     show_all = (request.args.get("all") == "1") and getattr(current_user, "is_admin", False)
 
@@ -1634,40 +1634,39 @@ def settings_post():
     lang = pick_lang(request)
     t = I18N.get(lang, I18N["tr"])
 
-    # form alanları
-    new_currency = (request.form.get("currency") or "").strip().upper()
-    try:
-        new_range = int(request.form.get("default_range_days") or 0)
-    except ValueError:
-        new_range = 0
+    currency = (request.form.get("currency") or "").strip().upper()
+    default_range_days = request.form.get("default_range_days", "").strip()
 
-    # validate basitçe: currency boş olmasın (isteğe göre daha sıkı yap)
-    if not new_currency:
-        flash(t.get("need_currency", "Lütfen para birimi seçin."), "error")
+    if not currency:
+        flash(t.get("need_currency","Para birimi seçiniz"), "error")
         return redirect(url_for("settings", lang=lang))
 
-    # DB'ye yaz
+    try:
+        default_range_days_int = int(default_range_days)
+    except Exception:
+        default_range_days_int = 30
+
     conn = get_db()
     try:
-        conn.execute(
-            "UPDATE users SET currency = ?, default_range_days = ? WHERE id = ?",
-            (new_currency, new_range, int(current_user.id))
-        )
+        conn.execute("""
+            UPDATE users
+            SET currency = ?, default_range_days = ?
+            WHERE id = ?
+        """, (currency, default_range_days_int, int(current_user.id)))
         conn.commit()
     finally:
         conn.close()
 
-    # oturumdaki current_user objesini hemen güncelle (böylece logout/login yapmana gerek kalmaz)
+    # Oturumdaki current_user nesnesini güncelle (UI anında değişsin)
     try:
-        setattr(current_user, "currency", new_currency)
-        setattr(current_user, "default_range_days", new_range)
+        current_user.currency = currency
+        current_user.default_range_days = default_range_days_int
     except Exception:
-        # bazen current_user proxy nesnesi attribute set'i izin vermez; bu durumda kullanıcıya bildir.
         pass
 
-    flash(t.get("saved", "Kaydedildi."), "success")
+    flash(t.get("settings_saved","Ayarlar kaydedildi"), "success")
     return redirect(url_for("settings", lang=lang))
-
+    
 @app.get("/account")
 @login_required
 def account():
@@ -1828,7 +1827,7 @@ def admin_users_delete(user_id):
 # ---------------- Run ----------------
 with app.app_context():
     init_db()
-    
+
 if __name__ == "__main__":
     init_db()
     ensure_admin_from_env_once()
