@@ -295,21 +295,21 @@
     <div>
       <div style="font-size:12px;opacity:.9">{{ t.get("today_sales","Bugünkü satış") }}</div>
       <div style="font-size:26px;font-weight:900">
-        {{ today_sales }} {{ currency }}
+        {{ today_sales }} {{ current_user.currency or currency }}
       </div>
     </div>
 
     <div>
       <div style="font-size:12px;opacity:.9">{{ t.get("today_expense","Bugünkü gider") }}</div>
       <div style="font-size:26px;font-weight:900">
-        {{ today_expense }} {{ currency }}
+        {{ today_expense }} {{ current_user.currency or currency }}
       </div>
     </div>
 
     <div>
       <div style="font-size:12px;opacity:.9">{{ t.get("today_profit","Bugünkü kâr") }}</div>
       <div style="font-size:30px;font-weight:900">
-        {{ today_profit }} {{ currency }}
+        {{ today_profit }} {{ current_user.currency or currency }}
       </div>
     </div>
 

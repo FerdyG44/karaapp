@@ -72,18 +72,19 @@
           </div>
 
           <div class="field">
-            <label>{{ t.get("sales","Satış") }} ({{ currency }})</label>
+            <label>{{ t.get("sales","Satış") }} ({{ current_user.currency or currency }})</label>
+
             <input class="inp" type="number" step="0.01" name="sales" required value="{{ '%.2f'|format(record['sales']) }}">
           </div>
 
           <div class="field">
-            <label>{{ t.get("expense","Gider") }} ({{ currency }})</label>
+            <label>{{ t.get("expense","Gider") }} ({{ current_user.currency or currency }})</label>
             <input class="inp" type="number" step="0.01" name="expense" required value="{{ '%.2f'|format(record['expense']) }}">
           </div>
 
           <div class="field">
-            <label>{{ t.get("profit","Kâr") }} ({{ currency }})</label>
-            <input class="inp" type="text" value="{{ '%.2f'|format(record['profit']) }} {{ currency }}" disabled>
+            <label>{{ t.get("profit","Kâr") }} ({{ current_user.currency or currency }})</label>
+            <input class="inp" type="text" value="{{ '%.2f'|format(record['profit']) }} {{ current_user.currency or currency }}" disabled>
           </div>
         </div>
 
