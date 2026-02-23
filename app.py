@@ -504,6 +504,31 @@ def is_valid_date_yyyy_mm_dd(day: str) -> bool:
     y, m, d = int(y), int(m), int(d)
     return 1900 <= y <= 2100 and 1 <= m <= 12 and 1 <= d <= 31
 
+def create_api_token(user_id: int, token: str, name: str = None, scopes: str = ""):
+    conn = get_db()
+    try:
+        conn.execute("INSERT INTO api_tokens (user_id, token, name, scopes) VALUES (?, ?, ?, ?)",
+                     (user_id, token, name, scopes))
+        conn.commit()
+    finally:
+        conn.close()
+
+def list_integrations(user_id: int):
+    conn = get_db()
+    try:
+        return conn.execute("SELECT * FROM integrations WHERE user_id = ?", (user_id,)).fetchall()
+    finally:
+        conn.close()
+
+def add_import_job(user_id: int, filename: str):
+    conn = get_db()
+    try:
+        conn.execute("INSERT INTO import_jobs (user_id, filename, status) VALUES (?, ?, 'pending')",
+                     (user_id, filename))
+        conn.commit()
+    finally:
+        conn.close()
+
 _login_attempts = defaultdict(list)  # key -> [timestamps]
 MAX_ATTEMPTS = 8
 WINDOW_SECONDS = 10 * 60   # 10 dk
@@ -514,24 +539,33 @@ _login_locked_until = {}   # key -> unix time
 def get_db():
     # DB_PATH'in klasörünü garanti et
     db_dir = os.path.dirname(DB_PATH)
-    if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
-
+    if db_dir and not os.path.exists(db_dir):
+         os.makedirs(db_dir, exist_ok=True)
+         
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
+    """
+    Initialize DB schema and run safe (idempotent) migrations.
+    Call this at app startup (ensure DB_PATH dir exists before).
+    """
     conn = get_db()
     try:
+        # ensure foreign keys
+        conn.execute("PRAGMA foreign_keys = ON;")
+
+        # ----- core tables -----
         conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 is_admin INTEGER NOT NULL DEFAULT 0,
-                expires_at TEXT
+                expires_at TEXT,
+                plan TEXT DEFAULT 'free'
             )
         """)
 
@@ -542,34 +576,99 @@ def init_db():
                 day TEXT NOT NULL,
                 sales REAL NOT NULL,
                 expense REAL NOT NULL,
-                profit REAL
+                profit REAL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
             )
         """)
 
-        # migration: add profit if missing
-        cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
-        if "profit" not in cols:
-            conn.execute("ALTER TABLE records ADD COLUMN profit REAL")
-            conn.execute("UPDATE records SET profit = sales - expense WHERE profit IS NULL")
+        # ----- optional / new columns for users -----
+        # helper to safely add column only if missing
+        def add_column_if_missing(table, column_sql, colname):
+            cols = [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+            if colname not in cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column_sql}")
 
-        # migration: add user_id if missing
-        cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
-        if "user_id" not in cols:
-            conn.execute("ALTER TABLE records ADD COLUMN user_id INTEGER")
-            # attach old records to first user (admin)
-            admin = conn.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1").fetchone()
-            admin_id = admin["id"] if admin else 1
-            conn.execute("UPDATE records SET user_id = ? WHERE user_id IS NULL", (admin_id,))
+        # users: currency, default_range_days, stripe fields, stripe ids, subscription_status
+        add_column_if_missing("users", "plan TEXT DEFAULT 'free'", "plan")  # already included in CREATE, safe
+        add_column_if_missing("users", "currency TEXT", "currency")
+        add_column_if_missing("users", "default_range_days INTEGER DEFAULT 30", "default_range_days")
+        add_column_if_missing("users", "stripe_customer_id TEXT", "stripe_customer_id")
+        add_column_if_missing("users", "stripe_subscription_id TEXT", "stripe_subscription_id")
+        add_column_if_missing("users", "subscription_status TEXT", "subscription_status")
+        add_column_if_missing("users", "expires_at TEXT", "expires_at")  # included in CREATE but safe
 
-        # migration: add plan if missing
-        cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
-        if "plan" not in cols:
-            conn.execute("ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'free'")
-        
+        # records: profit and user_id handled in CREATE, but also ensure migrations for old dbs
+        add_column_if_missing("records", "profit REAL", "profit")
+        add_column_if_missing("records", "user_id INTEGER", "user_id")
+
+        # ----- new feature tables -----
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS api_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token TEXT NOT NULL,
+                name TEXT,
+                scopes TEXT,
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS integrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                provider TEXT NOT NULL,
+                config TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS import_jobs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                filename TEXT,
+                status TEXT DEFAULT 'pending',
+                errors TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+
+        # ----- lightweight migrations/repairs for historic DBs -----
+        # If profit column is NULL for existing records, compute it.
+        try:
+            conn.execute("UPDATE records SET profit = (COALESCE(sales,0) - COALESCE(expense,0)) WHERE profit IS NULL")
+        except Exception:
+            # ignore if records table empty or other issue
+            pass
+
+        # If user_id in records is NULL, try to attach to first user (if any)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(records)").fetchall()]
+        if "user_id" in cols:
+            has_nulls = conn.execute("SELECT COUNT(1) as c FROM records WHERE user_id IS NULL").fetchone()["c"]
+            if has_nulls:
+                admin = conn.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1").fetchone()
+                admin_id = admin["id"] if admin else None
+                if admin_id:
+                    conn.execute("UPDATE records SET user_id = ? WHERE user_id IS NULL", (admin_id,))
+
+        # ----- ensure at least one admin user exists (if no users exist yet) -----
+        r = conn.execute("SELECT COUNT(1) as c FROM users").fetchone()
+        if r and r["c"] == 0:
+            # create default admin (change password after first login)
+            pw = generate_password_hash("admin123")
+            conn.execute("INSERT INTO users (username, password_hash, is_admin, plan) VALUES (?, ?, ?, ?)",
+                         ("admin", pw, 1, "pro"))
+            # note: create more secure random password in prod and show it once
+
         conn.commit()
     finally:
         conn.close()
-
+        
 
 _db_inited = False
 _db_lock = threading.Lock()
