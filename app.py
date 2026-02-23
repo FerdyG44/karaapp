@@ -3,12 +3,14 @@ import re
 import sqlite3
 import threading
 import time
-import csv
+
+import helpers
 
 import csv
 from io import StringIO
 from flask import Response
 
+from helpers import *
 
 from io import BytesIO
 
@@ -541,7 +543,7 @@ def get_db():
     db_dir = os.path.dirname(DB_PATH)
     if db_dir and not os.path.exists(db_dir):
          os.makedirs(db_dir, exist_ok=True)
-         
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -1824,6 +1826,9 @@ def admin_users_delete(user_id):
 
 
 # ---------------- Run ----------------
+with app.app_context():
+    init_db()
+    
 if __name__ == "__main__":
     init_db()
     ensure_admin_from_env_once()
