@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ t.get("account","Hesabım") }} — {{ t.get("title","KaraApp") }}</title>
+  <title>{{ t.get("account","Account") }} — {{ t.get("title","KaraApp") }}</title>
   <style>
     body{font-family:system-ui;margin:0;background:#f5f7fb}
     .wrap{max-width:720px;margin:0 auto;padding:24px}
@@ -20,17 +20,14 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h2 style="margin:0 0 8px 0;">👤 {{ t.get("account","Hesabım") }}</h2>
+      <h2 style="margin:0 0 8px 0;">👤 {{ t.get("account","Account") }}</h2>
 
       <div class="row">
-        <div><span class="k">{{ t.get("username","Kullanıcı adı") }}:</span> {{ current_user.username }}</div>
+        <div><span class="k">{{ t.get("username","Username") }}:</span> {{ current_user.username }}</div>
       </div>
 
       <div style="margin-top:8px;">
         <b>{{ t.get("plan","Plan") }}:</b> {{ (current_user.plan or "free")|upper }}
-      </div>
-      <div style="margin-top:4px;">
-        <b>{{ t.get("expires","Bitiş") }}:</b> {{ current_user.expires_at or "—" }}
       </div>
 
       <div class="row" style="margin-top:12px;">
@@ -41,27 +38,25 @@
         </div>
 
         <div>
-          <span class="k">{{ t.get("expires_at","Bitiş") }}:</span>
+          <span class="k">{{ t.get("expires_at","Expires") }}:</span>
           <span class="muted" style="margin:0;">{{ current_user.expires_at or "—" }}</span>
         </div>
       </div>
 
       <div class="row" style="margin-top:12px;">
-        <div><b>{{ t.get("export_access","Export erişimi") }}:</b>
+        <div>
+          <b>{{ t.get("export_access","Export access") }}:</b>
           {% if current_user.plan == "pro" %}
-            ✅ {{ t.get("enabled","Açık") }}
+            ✅ {{ t.get("enabled","Enabled") }}
           {% else %}
-            ❌ {{ t.get("disabled","Kapalı") }}
+            ❌ {{ t.get("disabled","Disabled") }}
           {% endif %}
         </div>
       </div>
 
-      <!-- buttons: Settings + Back -->
+      <!-- only Back button (Settings removed) -->
       <div class="row" style="margin-top:18px;">
-        <a class="btn-outline" href="{{ url_for('settings', lang=lang) }}">⚙️ {{ t.get("settings","Ayarlar") }}</a>
-
-        <!-- <-- BURAYA eklediğimiz Back butonu -->
-        <a class="btn-outline" href="{{ url_for('index', lang=lang) }}">← {{ t.get("back","Geri") }}</a>
+        <a class="btn-outline" href="{{ url_for('index', lang=lang) }}">← {{ t.get("back","Back") }}</a>
       </div>
     </div>
   </div>
