@@ -204,7 +204,9 @@ I18N = {
         "open": "Açık",
         "closed": "Kapalı",
         "back": "Geri",
+        "enabled": "Açık"
         "settings": "Ayarlar",
+        "expires_at": "Bitiş"
 
         "today_sales": "Bugünkü satış",
         "today_expense": "Bugünkü gider",
@@ -328,7 +330,10 @@ I18N = {
         "open": "Öppen",
         "closed": "Stängd",
         "back": "Tillbaka",
+        "disabled": "Stängd",
+        "expires": "Gäller till",
         "settings": "Inställningar",
+        "expires_at": "Gäller till"
 
         "today_sales": "Dagens försäljning",
         "today_expense": "Dagens kostnad",
@@ -452,6 +457,10 @@ I18N = {
         "closed": "Closed",
         "back": "Back",
         "settings": "Settings", 
+        "enabled": "Enabled"
+        "disabled": "Disabled",
+        "expires": "Expires",
+        "expires_at": "Expires"
 
         "today_sales": "Today's sales",
         "today_expense": "Today's expense",
@@ -1849,27 +1858,40 @@ def api_tokens_list():
 def api_tokens_create():
     lang = pick_lang(request)
     name = (request.form.get("name") or "").strip()
-    scopes = (request.form.get("scopes") or "").strip()  # e.g. "records:read,records:create"
+    scopes = (request.form.get("scopes") or "").strip()
 
-    token = _generate_api_token(32)
+    # name zorunluysa kontrol et (isteğe bağlı, istersen bunu kaldırabilirsin)
+    if not name:
+        flash("Name required", "error")
+        return redirect(url_for("api_tokens_list", lang=lang))
+
+    # 1) raw token üret (kullanıcıya gösterilecek)
+    raw_token = generate_token(32)
+
+    # 2) veritabanına kaydetmek için hashle
+    hashed = hash_token(raw_token)
 
     conn = get_db()
     try:
         conn.execute(
             "INSERT INTO api_tokens (user_id, token, name, scopes, is_active) VALUES (?, ?, ?, ?, 1)",
-            (int(current_user.id), token, name, scopes)
+            (int(current_user.id), hashed, name, scopes)
         )
         conn.commit()
     finally:
         conn.close()
 
-    # Gösterme sayfası: token sadece bu ekranda gösterilecek
-    return render_template("api_token_created.html", lang=lang, token=token)
+    # Kullanıcıya raw token'ı bir kere göster (template içinde uyar)
+    flash("API token created. Copy it now — it will not be shown again.", "success")
+    return render_template("api_token_created.html", lang=lang, token=raw_token)
 
 @app.post("/api/tokens/revoke/<int:token_id>")
 @login_required
 def api_tokens_revoke(token_id):
     lang = pick_lang(request)
+    token_id = request.form.get("token_id")
+    if not token_id:
+        abort(400)
     conn = get_db()
     try:
         conn.execute(

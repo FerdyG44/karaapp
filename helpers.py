@@ -11,6 +11,38 @@ from flask import request, abort
 IS_PROD = os.environ.get("RENDER") == "true"
 DB_PATH = "/var/data/data.db" if IS_PROD else "data.db"
 
+def generate_token(nbytes=32):
+    """
+    Rastgele okunabilir token üretir (URL-safe hex).
+    nbytes=32 -> 64 hex karakterlik token.
+    """
+    return secrets.token_urlsafe(nbytes)
+
+def hash_token(raw_token: str):
+    """
+    Token'ı veritabanında saklamak için hash'ler.
+    SHA256 ile hash ve hex döndürür. (salt ekleyebilirsin.)
+    """
+    if raw_token is None:
+        return None
+    # basit SHA256; istersen HMAC + secret kullan
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+def _get_api_token_row(hashed_token):
+    """
+    Veritabanından token row'u getirir. (helpers.get_db() kullanılmalı)
+    """
+    from helpers import get_db  # eğer aynı dosyada değilse import uyarısı
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT id, user_id, token, scopes, is_active, created_at FROM api_tokens WHERE token = ?",
+            (hashed_token,)
+        ).fetchone()
+        return row
+    finally:
+        conn.close()
+
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
