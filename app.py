@@ -17,6 +17,10 @@ from io import BytesIO
 from datetime import datetime, timedelta
 from functools import wraps
 from collections import defaultdict
+from flask import jsonify
+
+from flask import render_template
+from helpers import get_db, pick_lang
 
 from io import StringIO
 from flask import Response
@@ -1823,6 +1827,76 @@ def admin_users_delete(user_id):
     flash(t.get("user_deleted"), "ok")
     return redirect(url_for("admin_users", lang=lang))
 
+@app.get("/api/tokens")
+@login_required
+def api_tokens_list():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+
+    conn = get_db()
+    try:
+        tokens = conn.execute(
+            "SELECT id, name, scopes, is_active, created_at FROM api_tokens WHERE user_id = ? ORDER BY id DESC",
+            (int(current_user.id),)
+        ).fetchall()
+    finally:
+        conn.close()
+
+    return render_template("api_tokens.html", lang=lang, t=t, tokens=tokens)
+
+@app.post("/api/tokens/create")
+@login_required
+def api_tokens_create():
+    lang = pick_lang(request)
+    name = (request.form.get("name") or "").strip()
+    scopes = (request.form.get("scopes") or "").strip()  # e.g. "records:read,records:create"
+
+    token = _generate_api_token(32)
+
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO api_tokens (user_id, token, name, scopes, is_active) VALUES (?, ?, ?, ?, 1)",
+            (int(current_user.id), token, name, scopes)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Gösterme sayfası: token sadece bu ekranda gösterilecek
+    return render_template("api_token_created.html", lang=lang, token=token)
+
+@app.post("/api/tokens/revoke/<int:token_id>")
+@login_required
+def api_tokens_revoke(token_id):
+    lang = pick_lang(request)
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE api_tokens SET is_active = 0 WHERE id = ? AND user_id = ?",
+            (token_id, int(current_user.id))
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return redirect(url_for("api_tokens_list", lang=lang))
+
+@app.get("/api/v1/records")
+@api_auth_required(["records:read"])
+def api_get_records():
+    # request.api_user_id decorator tarafından set ediliyor
+    uid = int(request.api_user_id)
+
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT id, day, sales, expense, profit FROM records WHERE user_id = ? ORDER BY day DESC LIMIT 500",
+            (uid,)
+        ).fetchall()
+        data = [dict(r) for r in rows]
+    finally:
+        conn.close()
+    return jsonify({"ok": True, "records": data})
 
 # ---------------- Run ----------------
 with app.app_context():

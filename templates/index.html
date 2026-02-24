@@ -269,6 +269,9 @@
         <a class="btn-outline" href="{{ url_for('admin_users', lang=lang) }}">
     {{ t.get("manage_users","Manage users") }}
   </a>
+  </div>
+  <a class="btn-outline" href="{{ url_for('api_tokens_list', lang=lang) }}">API Tokens</a>
+
 {% endif %}
 
       {% if current_user.plan == 'free' %}
@@ -373,9 +376,9 @@
           {% endif %}
 
           <td>{{ r["day"] }}</td>
-          <td>{{ "%.2f"|format(r["sales"]) }} {{ currency }}</td>
-          <td>{{ "%.2f"|format(r["expense"]) }} {{ currency }}</td>
-          <td>{{ "%.2f"|format(r["profit"]) }} {{ currency }}</td>
+          <td>{{ "%.2f"|format(r["sales"]) }} {{ current_user.currency or currency }}</td>
+          <td>{{ "%.2f"|format(r["expense"]) }} {{ current_user.currency or currency }}</td>
+          <td>{{ "%.2f"|format(r["profit"]) }} {{ current_user.currency or currency }}</td>
 
           <td style="white-space:nowrap;">
             <a href="{{ url_for('edit_record', record_id=r['id'], lang=lang) }}"

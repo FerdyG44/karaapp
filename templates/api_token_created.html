@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="{{ lang or 'tr' }}">
+<head>
+  <meta charset="utf-8">
+  <title>API Token Created</title>
+  <style>body{font-family:system-ui;margin:20px} pre{background:#f4f6f8;padding:12px;border-radius:6px}</style>
+</head>
+<body>
+  <h1>API token created</h1>
+  <p>Copy & store this token now — it will be shown only once:</p>
+  <pre>{{ token }}</pre>
+  <p><a href="{{ url_for('api_tokens_list', lang=lang) }}">Back to tokens</a></p>
+</body>
+</html>

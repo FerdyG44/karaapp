@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="{{ lang or 'tr' }}">
+<head>
+  <meta charset="utf-8">
+  <title>API Tokens</title>
+  <style>
+    body{font-family:system-ui;margin:20px}
+    table{border-collapse:collapse;width:100%}
+    th,td{padding:8px;border:1px solid #eee}
+    form{display:inline}
+    pre{background:#f6f8fa;padding:12px;border-radius:6px}
+    input.inp{padding:8px;border-radius:8px;border:1px solid #ddd}
+  </style>
+</head>
+<body>
+  <h2>API Tokens</h2>
+
+  <h3>Create token</h3>
+  <form method="post" action="{{ url_for('api_tokens_create', lang=lang) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input class="inp" name="name" placeholder="Name (e.g. POS integration)">
+    <input class="inp" name="scopes" placeholder="scopes (comma separated e.g. records:read)">
+    <button type="submit">Create</button>
+  </form>
+
+  <h3 style="margin-top:20px;">Your tokens</h3>
+  <table>
+    <thead>
+      <tr><th>id</th><th>name</th><th>scopes</th><th>active</th><th>created</th><th>actions</th></tr>
+    </thead>
+    <tbody>
+      {% for t in tokens %}
+      <tr>
+        <td>{{ t.id }}</td>
+        <td>{{ t.name }}</td>
+        <td>{{ t.scopes }}</td>
+        <td>{{ 'yes' if t.is_active else 'no' }}</td>
+        <td>{{ t.created_at }}</td>
+        <td>
+          {% if t.is_active %}
+            <form method="post" action="{{ url_for('api_tokens_revoke', token_id=t.id, lang=lang) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Revoke</button>
+            </form>
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p style="margin-top:18px"><a href="{{ url_for('index', lang=lang) }}">← Back</a></p>
+</body>
+</html>
