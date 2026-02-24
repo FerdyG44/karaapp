@@ -41,6 +41,10 @@ from flask_wtf.csrf import CSRFProtect
 
 import stripe
 
+import logging
+logging.basicConfig(level=logging.INFO)
+app.logger.info("API /api/v1/records called start=%s end=%s auth=%s", start, end, request.headers.get("Authorization"))
+
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 # ---------------- App ----------------
@@ -1904,65 +1908,122 @@ def api_tokens_revoke(token_id):
         conn.close()
     return redirect(url_for("api_tokens_list", lang=lang))
 
+from flask import jsonify, g
+from datetime import datetime
+
 @app.get("/api/v1/records")
-@api_auth_required(["records:read"])
-def api_get_records():
-    # request.api_user_id decorator tarafından set ediliyor
-    uid = int(request.api_user_id)
-
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            "SELECT id, day, sales, expense, profit FROM records WHERE user_id = ? ORDER BY day DESC LIMIT 500",
-            (uid,)
-        ).fetchall()
-        data = [dict(r) for r in rows]
-    finally:
-        conn.close()
-    return jsonify({"ok": True, "records": data})
-
-@app.get("/api/records")
-@require_api_token(scopes_required=["records:read"])  # token kontrolü
+@require_api_token(scopes_required=["records:read"])
 def api_records_list():
-    """
-    GET /api/records
-    optional query params: start, end, user_id (admin için)
-    """
-    # basit listeleme: kendi kullanıcı id'si ile (gizlilik)
-    # request.api_user_id, require_api_token dekoratörü tarafından set edilebilir
-    user_id = getattr(request, "api_user_id", None)
+    # request.api_user_id dekoratör tarafından atanıyorsa al, yoksa g.api_user_id kullan
+    user_id = getattr(request, "api_user_id", None) or getattr(g, "api_user_id", None)
     if not user_id:
-        # fallback: 401
         return jsonify({"error": "no api user"}), 401
 
-    # istenirse start/end query param'ları ile filtre ekleyebilirsin
+    # parse optional filters
     start = (request.args.get("start") or "").strip()
     end = (request.args.get("end") or "").strip()
+
+    def _valid_date(s):
+        try:
+            datetime.strptime(s, "%Y-%m-%d")
+            return True
+        except:
+            return False
+
+    if (start and not _valid_date(start)) or (end and not _valid_date(end)):
+        return jsonify({"error":"invalid date format (YYYY-MM-DD)"}), 400
+
+    # try to coerce user_id to int
+    try:
+        user_id = int(user_id)
+    except Exception:
+        return jsonify({"error":"invalid api user id"}), 400
+
+    # log for debugging
+    app.logger.info("API records list called - user_id=%s start=%s end=%s", user_id, start, end)
 
     conn = get_db()
     try:
         if start and end:
             rows = conn.execute(
                 "SELECT id, day, sales, expense, profit FROM records WHERE user_id = ? AND day BETWEEN ? AND ? ORDER BY day DESC LIMIT 100",
-                (int(user_id), start, end)
+                (user_id, start, end)
             ).fetchall()
         else:
             rows = conn.execute(
                 "SELECT id, day, sales, expense, profit FROM records WHERE user_id = ? ORDER BY day DESC LIMIT 100",
-                (int(user_id),)
+                (user_id,)
             ).fetchall()
 
-        data = []
-        for r in rows:
-            data.append({
-                "id": r["id"],
-                "day": r["day"],
-                "sales": float(r["sales"] or 0),
-                "expense": float(r["expense"] or 0),
-                "profit": float(r["profit"] or 0),
-            })
+        data = [{
+            "id": r["id"],
+            "day": r["day"],
+            "sales": float(r["sales"] or 0),
+            "expense": float(r["expense"] or 0),
+            "profit": float(r["profit"] or 0),
+        } for r in rows]
 
-        return jsonify({"rows": data})
+        return jsonify({
+            "ok": True,
+            "records": data,
+            "meta": {"count": len(data), "limit": 100, "start": start or None, "end": end or None}
+        })
+    finally:
+        conn.close()
+        
+@app.get("/api/records")
+@require_api_token(scopes_required=["records:read"])
+def api_records_list():
+    # request.api_user_id dekoratör tarafından atanıyorsa al, yoksa g.api_user_id kullan
+    user_id = getattr(request, "api_user_id", None) or getattr(g, "api_user_id", None)
+    if not user_id:
+        return jsonify({"error": "no api user"}), 401
+
+    # parse optional filters
+    start = (request.args.get("start") or "").strip()
+    end = (request.args.get("end") or "").strip()
+
+    def _valid_date(s):
+        try:
+            datetime.strptime(s, "%Y-%m-%d")
+            return True
+        except:
+            return False
+
+    if (start and not _valid_date(start)) or (end and not _valid_date(end)):
+        return jsonify({"error":"invalid date format (YYYY-MM-DD)"}), 400
+
+    # try to coerce user_id to int
+    try:
+        user_id = int(user_id)
+    except Exception:
+        return jsonify({"error":"invalid api user id"}), 400
+
+    conn = get_db()
+    try:
+        if start and end:
+            rows = conn.execute(
+                "SELECT id, day, sales, expense, profit FROM records WHERE user_id = ? AND day BETWEEN ? AND ? ORDER BY day DESC LIMIT 100",
+                (user_id, start, end)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, day, sales, expense, profit FROM records WHERE user_id = ? ORDER BY day DESC LIMIT 100",
+                (user_id,)
+            ).fetchall()
+
+        data = [{
+            "id": r["id"],
+            "day": r["day"],
+            "sales": float(r["sales"] or 0),
+            "expense": float(r["expense"] or 0),
+            "profit": float(r["profit"] or 0),
+        } for r in rows]
+
+        return jsonify({
+            "rows": data,
+            "meta": {"count": len(data), "limit": 100, "start": start or None, "end": end or None}
+        })
     finally:
         conn.close()
 
