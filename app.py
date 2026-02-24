@@ -23,6 +23,9 @@ from flask import request, jsonify
 from flask import render_template
 from helpers import get_db, pick_lang
 
+from flask import jsonify, g
+from datetime import datetime
+
 from io import StringIO
 from flask import Response
 from flask import (
@@ -1908,8 +1911,7 @@ def api_tokens_revoke(token_id):
         conn.close()
     return redirect(url_for("api_tokens_list", lang=lang))
 
-from flask import jsonify, g
-from datetime import datetime
+
 
 @app.get("/api/v1/records")
 @require_api_token(scopes_required=["records:read"])
@@ -1922,6 +1924,10 @@ def api_records_list():
     # parse optional filters
     start = (request.args.get("start") or "").strip()
     end = (request.args.get("end") or "").strip()
+
+    auth_header = request.headers.get("Authorization", "")
+    masked_auth = auth_header[:10] + "..." if auth_header else ""
+    app.logger.info("API /api/v1/records called start=%s end=%s auth=%s", start, end, masked_auth)
 
     def _valid_date(s):
         try:
@@ -1970,7 +1976,7 @@ def api_records_list():
         })
     finally:
         conn.close()
-        
+
 @app.get("/api/records")
 @require_api_token(scopes_required=["records:read"])
 def api_records_list():
