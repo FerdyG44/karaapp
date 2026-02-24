@@ -1,61 +1,45 @@
+# ---------- app.py: cleaned imports and app init ----------
 import os
 import re
 import sqlite3
 import threading
 import time
-
-import helpers
-
 import csv
-from io import StringIO
-from flask import Response
-
-from helpers import *
-
-from io import BytesIO
+import secrets
+import hashlib
+import logging
 
 from datetime import datetime, timedelta
 from functools import wraps
 from collections import defaultdict
-from flask import jsonify
-from flask import request, jsonify
 
-from flask import render_template
-from helpers import get_db, pick_lang
-
-from flask import jsonify, g
-from datetime import datetime
-
-from io import StringIO
-from flask import Response
 from flask import (
-    Flask, render_template, request, redirect, url_for,
-    flash, abort, session
+    Flask, request, jsonify, render_template, redirect,
+    url_for, flash, abort, session, g, Response
 )
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_login import (
-    LoginManager, UserMixin,
-    login_user, logout_user,
+    LoginManager, UserMixin, login_user, logout_user,
     login_required, current_user
 )
-
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 import stripe
 
-import logging
-logging.basicConfig(level=logging.INFO)
-# app.logger.info("API /api/v1/records called start=%s end=%s auth=%s", start, end, request.headers.get("Authorization"))
+# local helpers (single import)
+import helpers
+from helpers import get_db, pick_lang, currency_for_lang
 
+# ---------- logging ----------
+# configure basic logging; app.logger will be available after app created
+logging.basicConfig(level=logging.INFO)
+
+# ---------- stripe key (env) ----------
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 # ---------------- App ----------------
-import os
-from flask import Flask
-from werkzeug.middleware.proxy_fix import ProxyFix
-from flask_wtf.csrf import CSRFProtect, CSRFError
-
 app = Flask(__name__)
 
 # Proxy arkasında doğru https/host algısı
@@ -75,8 +59,7 @@ csrf = CSRFProtect(app)
 
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
-    # pick_lang/I18N bu satırdan sonra tanımlıysa burada kullanma,
-    # basit bir redirect yap
+    # basit redirect; burada pick_lang kullanmıyoruz çünkü hata oluştu
     from flask import request, redirect, url_for, flash
     flash("CSRF error. Refresh and try again.", "error")
     return redirect(request.referrer or url_for("login", lang="tr"))
