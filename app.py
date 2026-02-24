@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from collections import defaultdict
 from flask import jsonify
+from flask import request, jsonify
 
 from flask import render_template
 from helpers import get_db, pick_lang
@@ -1919,6 +1920,51 @@ def api_get_records():
     finally:
         conn.close()
     return jsonify({"ok": True, "records": data})
+
+@app.get("/api/records")
+@require_api_token(scopes_required=["records:read"])  # token kontrolü
+def api_records_list():
+    """
+    GET /api/records
+    optional query params: start, end, user_id (admin için)
+    """
+    # basit listeleme: kendi kullanıcı id'si ile (gizlilik)
+    # request.api_user_id, require_api_token dekoratörü tarafından set edilebilir
+    user_id = getattr(request, "api_user_id", None)
+    if not user_id:
+        # fallback: 401
+        return jsonify({"error": "no api user"}), 401
+
+    # istenirse start/end query param'ları ile filtre ekleyebilirsin
+    start = (request.args.get("start") or "").strip()
+    end = (request.args.get("end") or "").strip()
+
+    conn = get_db()
+    try:
+        if start and end:
+            rows = conn.execute(
+                "SELECT id, day, sales, expense, profit FROM records WHERE user_id = ? AND day BETWEEN ? AND ? ORDER BY day DESC LIMIT 100",
+                (int(user_id), start, end)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, day, sales, expense, profit FROM records WHERE user_id = ? ORDER BY day DESC LIMIT 100",
+                (int(user_id),)
+            ).fetchall()
+
+        data = []
+        for r in rows:
+            data.append({
+                "id": r["id"],
+                "day": r["day"],
+                "sales": float(r["sales"] or 0),
+                "expense": float(r["expense"] or 0),
+                "profit": float(r["profit"] or 0),
+            })
+
+        return jsonify({"rows": data})
+    finally:
+        conn.close()
 
 # ---------------- Run ----------------
 with app.app_context():
