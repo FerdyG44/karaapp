@@ -2,6 +2,8 @@ import os
 import sqlite3
 import secrets
 import hashlib
+import hashlib, secrets, sqlite3, os
+
 from functools import wraps
 from datetime import datetime
 from flask import request, abort, g
@@ -57,32 +59,20 @@ def get_api_token_row_from_raw(raw_token: str):
 
 # ---------- API auth decorators ----------
 def require_api_token(scopes_required=None):
-    """
-    Decorator factory that enforces presence of a valid API token (Bearer or api_key query param).
-    Usage:
-      @require_api_token(scopes_required=["records:read"])
-      def route(...): ...
-    On success, sets request.api_user_id and g.api_user_id (if g available).
-    """
     def decorator(f):
         @wraps(f)
         def wrapped(*args, **kwargs):
-            # 1) read token
             auth = request.headers.get("Authorization", "")
             api_key = None
-            if auth and auth.startswith("Bearer "):
+            if auth.startswith("Bearer "):
                 api_key = auth.split(" ", 1)[1].strip()
             else:
-                api_key = request.args.get("api_key") or request.form.get("api_key")
+                api_key = request.args.get("api_key")
 
             if not api_key:
-                abort(401, "Missing API token")
+                abort(401, "Missing API key")
 
-            # 2) lookup token (we store hashed tokens in DB)
             hashed = hash_token(api_key)
-            if not hashed:
-                abort(401, "Invalid API token")
-
             conn = get_db()
             try:
                 row = conn.execute(
@@ -92,23 +82,16 @@ def require_api_token(scopes_required=None):
             finally:
                 conn.close()
 
-            if not row:
-                abort(401, "Invalid API token")
-            if row["is_active"] == 0:
-                abort(401, "Token revoked")
+            if not row or row["is_active"] == 0:
+                abort(401, "Invalid or revoked token")
 
-            # 3) scope check (if requested)
             if scopes_required:
                 token_scopes = set([s.strip() for s in (row["scopes"] or "").split(",") if s.strip()])
-                required = set(scopes_required if isinstance(scopes_required, (list, tuple)) else [scopes_required])
-                if not required.issubset(token_scopes):
+                required_scopes = set(scopes_required if isinstance(scopes_required,(list,tuple)) else [scopes_required])
+                if not required_scopes.issubset(token_scopes):
                     abort(403, "Insufficient scope")
 
-            # 4) attach user id for route usage
-            try:
-                request.api_user_id = row["user_id"]
-            except Exception:
-                pass
+            request.api_user_id = row["user_id"]
             try:
                 g.api_user_id = row["user_id"]
             except Exception:

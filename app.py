@@ -30,7 +30,8 @@ import stripe
 
 # local helpers (single import)
 import helpers
-from helpers import get_db, pick_lang, currency_for_lang
+from helpers import require_api_token, get_db, pick_lang, generate_token, hash_token
+
 
 # ---------- logging ----------
 # configure basic logging; app.logger will be available after app created
