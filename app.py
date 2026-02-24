@@ -204,9 +204,9 @@ I18N = {
         "open": "Açık",
         "closed": "Kapalı",
         "back": "Geri",
-        "enabled": "Açık"
+        "enabled": "Açık",
         "settings": "Ayarlar",
-        "expires_at": "Bitiş"
+        "expires_at": "Bitiş",
 
         "today_sales": "Bugünkü satış",
         "today_expense": "Bugünkü gider",
@@ -333,7 +333,7 @@ I18N = {
         "disabled": "Stängd",
         "expires": "Gäller till",
         "settings": "Inställningar",
-        "expires_at": "Gäller till"
+        "expires_at": "Gäller till",
 
         "today_sales": "Dagens försäljning",
         "today_expense": "Dagens kostnad",
@@ -457,10 +457,10 @@ I18N = {
         "closed": "Closed",
         "back": "Back",
         "settings": "Settings", 
-        "enabled": "Enabled"
+        "enabled": "Enabled",
         "disabled": "Disabled",
         "expires": "Expires",
-        "expires_at": "Expires"
+        "expires_at": "Expires",
 
         "today_sales": "Today's sales",
         "today_expense": "Today's expense",
