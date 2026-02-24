@@ -46,7 +46,7 @@ import stripe
 
 import logging
 logging.basicConfig(level=logging.INFO)
-app.logger.info("API /api/v1/records called start=%s end=%s auth=%s", start, end, request.headers.get("Authorization"))
+# app.logger.info("API /api/v1/records called start=%s end=%s auth=%s", start, end, request.headers.get("Authorization"))
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
@@ -1927,7 +1927,7 @@ def api_records_list():
 
     auth_header = request.headers.get("Authorization", "")
     masked_auth = auth_header[:10] + "..." if auth_header else ""
-    app.logger.info("API /api/v1/records called start=%s end=%s auth=%s", start, end, masked_auth)
+#     app.logger.info("API /api/v1/records called start=%s end=%s auth=%s", start, end, masked_auth)
 
     def _valid_date(s):
         try:
