@@ -1,0 +1,87 @@
+<!-- templates/dashboard.html -->
+<!doctype html>
+<html lang="{{ lang or 'tr' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ t.get("title","KaraApp") }} — Dashboard</title>
+  <style>
+    body{font-family:system-ui,Arial;margin:20px;background:#f5f7fb}
+    .card{background:#fff;padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.06);max-width:900px;margin:12px auto}
+    .kpi{font-size:28px;font-weight:900}
+    .kpi.small{font-size:18px}
+    .row{display:flex;gap:20px;flex-wrap:wrap}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Dashboard (Canlı)</h2>
+    <div class="row" style="margin-top:8px;">
+      <div>
+        <div style="font-size:13px;color:#6b7280">Bugün</div>
+        <div id="today-date" class="kpi small">{{ today_date or "" }}</div>
+      </div>
+      <div>
+        <div style="font-size:13px;color:#6b7280">Satış</div>
+        <div id="today-sales" class="kpi">0 {{ current_user.currency or currency }}</div>
+      </div>
+      <div>
+        <div style="font-size:13px;color:#6b7280">Gider</div>
+        <div id="today-expense" class="kpi">0 {{ current_user.currency or currency }}</div>
+      </div>
+      <div>
+        <div style="font-size:13px;color:#6b7280">Kâr</div>
+        <div id="today-profit" class="kpi">0 {{ current_user.currency or currency }}</div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;color:#6b7280">
+      Canlı güncellemeler için bağlantı durumu: <span id="sse-status">Bağlanıyor...</span>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script>
+    // Eğer server-side session auth kullanıyorsan api_key parametresi boş bırak.
+    const use_token = {{ 'true' if raw_token else 'false' }};
+    const rawToken = {{ ('"' + raw_token + '"') if raw_token else '""' }};
+
+    const streamUrl = use_token
+      ? "/api/v1/stream?api_key=" + encodeURIComponent(rawToken)
+      : "/api/v1/stream"; // session-cookie ile doğrulama yapan endpoint
+
+    const evtSource = new EventSource(streamUrl);
+
+    evtSource.onopen = function() {
+      document.getElementById('sse-status').innerText = "Bağlandı";
+    };
+
+    evtSource.onerror = function(e) {
+      document.getElementById('sse-status').innerText = "Hata / kopma (console'u kontrol et)";
+      console.error("SSE error", e);
+    };
+
+    evtSource.onmessage = function(e) {
+      // e.data bir JSON string olacak (publish_record_event ile aynı shape)
+      try {
+        const payload = JSON.parse(e.data);
+        console.log("SSE payload:", payload);
+        if (payload.day) {
+          document.getElementById('today-date').innerText = payload.day;
+        }
+        if (payload.sales !== undefined) {
+          document.getElementById('today-sales').innerText = payload.sales + " {{ current_user.currency or currency }}";
+        }
+        if (payload.expense !== undefined) {
+          document.getElementById('today-expense').innerText = payload.expense + " {{ current_user.currency or currency }}";
+        }
+        if (payload.profit !== undefined) {
+          document.getElementById('today-profit').innerText = payload.profit + " {{ current_user.currency or currency }}";
+        }
+      } catch (err) {
+        console.error("SSE parse error", err, e.data);
+      }
+    };
+  </script>
+</body>
+</html>

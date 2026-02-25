@@ -20,6 +20,104 @@ def get_db():
     return conn
 
 # ---------- Token utilities ----------
+
+# basit in-memory pubsub (single-process)
+# helpers.py içinde aşağıyı ekle (veya varsa merge et)
+import threading
+from queue import Queue, Empty
+import time
+
+# global: user_id -> set of queues
+_user_queues = {}
+_user_queues_lock = threading.Lock()
+
+def _subscribe_user_queue(user_id):
+    """Abone oluştur: döndürülen Queue'yi SSE generator okuyacak."""
+    q = Queue()
+    with _user_queues_lock:
+        lst = _user_queues.get(int(user_id))
+        if not lst:
+            lst = []
+            _user_queues[int(user_id)] = lst
+        lst.append(q)
+    return q
+
+def _unsubscribe_user_queue(user_id, q):
+    with _user_queues_lock:
+        lst = _user_queues.get(int(user_id)) or []
+        try:
+            lst.remove(q)
+        except ValueError:
+            pass
+        if not lst:
+            _user_queues.pop(int(user_id), None)
+
+def publish_record_event(user_id, payload):
+    """Tüm bağlı clientlara gönder (non-blocking)."""
+    user_id = int(user_id)
+    with _user_queues_lock:
+        lst = list(_user_queues.get(user_id) or [])
+    # push to each queue (non-blocking put, with small timeout handling)
+    for q in lst:
+        try:
+            q.put(payload, block=False)
+        except Exception:
+            # queue dolu olursa, drop et (SSE client yeniden bağlanır)
+            try:
+                q.put(payload, block=True, timeout=0.5)
+            except Exception:
+                pass
+            
+def _subscribe_user_queue(user_id:int):
+    q = Queue(maxsize=100)
+    with _sub_lock:
+        _record_subscribers.setdefault(int(user_id), []).append(q)
+    return q
+
+def _unsubscribe_user_queue(user_id:int, q):
+    with _sub_lock:
+        if int(user_id) in _record_subscribers:
+            try:
+                _record_subscribers[int(user_id)].remove(q)
+            except ValueError:
+                pass
+
+import os
+try:
+    import redis
+except Exception:
+    redis = None
+
+REDIS_URL = os.environ.get("REDIS_URL")  # production'da ayarla
+
+def publish_record_event(user_id, payload: dict):
+    """
+    Redis publish; payload küçük JSON (string).
+    If no redis configured, just log.
+    """
+    import json
+    if REDIS_URL and redis:
+        r = redis.from_url(REDIS_URL)
+        channel = f"records:user:{user_id}"
+        r.publish(channel, json.dumps(payload))
+    else:
+        # fallback: app.logger (no multi-process real-time)
+        from flask import current_app
+        current_app.logger.info("pub record event (no redis) user=%s payload=%s", user_id, payload)
+
+import hmac, hashlib
+SHARED_SECRET = os.environ.get("INTEGRATION_SECRET","change-me")
+
+def verify_signature(raw_body, header_sig):
+    # header_sig like: sha256=...
+    if not header_sig:
+        return False
+    if not header_sig.startswith("sha256="):
+        return False
+    sig = header_sig.split("=",1)[1]
+    mac = hmac.new(SHARED_SECRET.encode(), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(mac, sig)
+
 def generate_token(nbytes: int = 32) -> str:
     """
     Generate a URL-safe random token to show to the user.

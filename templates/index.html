@@ -87,6 +87,7 @@
       box-shadow:0 0 0 2px rgba(37,99,235,.10) inset;
     }
 
+    
     /* ===== KPI ===== */
     .grid{
       display:grid;
@@ -195,8 +196,108 @@
 </style>
 </head>
 
+<script>
+(function(){
+  // RAW token test için (geliştirme). Üretimde buraya koyma — kullanıcıya gösterilen "raw token" sadece bir kere görülebilir.
+  const API_KEY = ""; // test için buraya raw token koyabilirsin (veya kullanıcının tarayıcısına console ile geçir)
+  const TOKEN = API_KEY || new URLSearchParams(window.location.search).get('api_key'); // fallback
+
+  function connectSSE(token) {
+    const qs = token ? "?api_key=" + encodeURIComponent(token) : "";
+    const url = "/api/v1/stream" + qs;
+    console.log("SSE connect ->", url);
+    const es = new EventSource(url);
+
+    es.onopen = function() {
+      console.log("SSE open", url);
+    };
+
+    es.onmessage = function(e) {
+      try {
+        const payload = JSON.parse(e.data);
+        // güvenlik: element varsa güncelle, yoksa console.log
+        if (payload) {
+          if (document.getElementById("today-sales")) {
+            document.getElementById("today-sales").innerText = (payload.sales || 0).toFixed(2);
+          }
+          if (document.getElementById("today-expense")) {
+            document.getElementById("today-expense").innerText = (payload.expense || 0).toFixed(2);
+          }
+          if (document.getElementById("today-profit")) {
+            document.getElementById("today-profit").innerText = (payload.profit || 0).toFixed(2);
+          }
+          if (document.getElementById("today-date") && payload.day) {
+            document.getElementById("today-date").innerText = payload.day;
+          }
+        }
+      } catch (err) {
+        console.error("SSE parse error", err, e.data);
+      }
+    };
+
+    es.onerror = function(err) {
+      console.warn("SSE error", err);
+      // onerror çağrıldığında readyState kontrolü yap. 0=CONNECTING, 1=OPEN, 2=CLOSED
+      if (es.readyState === EventSource.CLOSED) {
+        console.warn("SSE closed — will try reconnect in 3s");
+        setTimeout(function(){ connectSSE(token); }, 3000);
+      }
+    };
+
+    return es;
+  }
+
+  // Başlat:
+  if (TOKEN) {
+    connectSSE(TOKEN);
+  } else {
+    // eğer token yoksa, bağlamadan önce konsolda token girip test etmek için bir küçük helper göster:
+    console.info("No API token provided in page. To test SSE open console and run: connectSSE('PASTE_RAW_TOKEN')");
+    // expose helper for interactive tests
+    window.connectSSE = connectSSE;
+  }
+})();
+</script>
+
 <body>
 <div class="wrap">
+
+  <!-- ===== KPI (realtime-ready) ===== -->
+<div class="grid">
+  <div class="card">
+    <!-- TODAY SUMMARY -->
+    <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#0ea5e9,#22c55e);color:white;">
+      <div style="font-size:13px;opacity:.9;">
+        📅 <span id="today-date">{{ today_date }}</span>
+      </div>
+
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px">
+
+        <div>
+          <div style="font-size:12px;opacity:.9">{{ t.get("today_sales","Bugünkü satış") }}</div>
+          <div style="font-size:26px;font-weight:900">
+            <span id="today-sales">{{ '%.2f'|format(today_sales) }}</span> <span id="today-currency">{{ current_user.currency or currency }}</span>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:12px;opacity:.9">{{ t.get("today_expense","Bugünkü gider") }}</div>
+          <div style="font-size:26px;font-weight:900">
+            <span id="today-expense">{{ '%.2f'|format(today_expense) }}</span> <span id="today-currency-exp">{{ current_user.currency or currency }}</span>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:12px;opacity:.9">{{ t.get("today_profit","Bugünkü kâr") }}</div>
+          <div style="font-size:30px;font-weight:900">
+            <span id="today-profit">{{ '%.2f'|format(today_profit) }}</span> <span id="today-currency-profit">{{ current_user.currency or currency }}</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ===== TOP ===== -->
 <div class="header">

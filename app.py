@@ -1828,6 +1828,28 @@ def admin_users_delete(user_id):
     flash(t.get("user_deleted"), "ok")
     return redirect(url_for("admin_users", lang=lang))
 
+@app.get("/dashboard")
+@login_required
+def dashboard():
+    lang = pick_lang(request)
+    t = I18N.get(lang, I18N["tr"])
+    currency = currency_for_lang(lang)
+
+    # Eğer token bazlı (kullanıcıya ait raw token'ı template'e koymak istersen)
+    # Not: DB'de token hash'lenmiş olabilir. Eğer yaratırken raw token'ı göstermediysen, burada raw yok.
+    # Bu örnek "en son yaratılan aktif token"ın ham halini DB'den göstermeyi varsaymaz; 
+    # güvenli yol: kullanıcı token oluştururken raw'ı bir kere alır. Burada sadece placeholder gönderiyoruz.
+    raw_token = ""  # opsiyonel: eğer raw token'ı güvenli şekilde saklıyorsan buraya koy
+
+    # Bugünkü tarih + (opsiyonel) değerler - index'teki hesaplama ile uyumlu olması iyi.
+    today_date = datetime.now().strftime("%Y-%m-%d")
+
+    return render_template("dashboard.html",
+                           lang=lang, t=t, currency=currency,
+                           raw_token=raw_token,
+                           today_date=today_date)
+
+
 @app.get("/api/tokens")
 @login_required
 def api_tokens_list():
@@ -1895,11 +1917,204 @@ def api_tokens_revoke(token_id):
         conn.close()
     return redirect(url_for("api_tokens_list", lang=lang))
 
+from flask import Response, stream_with_context
+import json
+import time
+import queue
+
+# global subscribers dict: user_id -> list of queue.Queue
+SUBSCRIBERS = {}
+
+def subscribe(user_id):
+    q = queue.Queue()
+    SUBSCRIBERS.setdefault(user_id, []).append(q)
+    return q
+
+def unsubscribe(user_id, q):
+    lst = SUBSCRIBERS.get(user_id) or []
+    try:
+        lst.remove(q)
+    except ValueError:
+        pass
+    if not lst:
+        SUBSCRIBERS.pop(user_id, None)
+
+def publish_record_event(user_id, payload):
+    """
+    payload: dict -> will be JSONified when sending
+    This function is used by your API create record (after insert) to send live updates.
+    """
+    import json
+    lst = SUBSCRIBERS.get(user_id) or []
+    msg = json.dumps(payload)
+    for q in lst:
+        try:
+            q.put_nowait(msg)
+        except Exception:
+            pass  # best-effort
+
+
+@app.get("/api/v1/stream")
+@require_api_token(scopes_required=[])   # or require login if only web clients
+def api_stream():
+    """
+    Server-Sent Events stream.
+    Client connects with Authorization header (or api_key query param).
+    For production use Redis subscribe per-user channel.
+    """
+    user_id = getattr(request, "api_user_id", None)
+    if not user_id:
+        return jsonify({"error":"no api user"}), 401
+
+    def event_stream():
+        # if redis available, subscribe:
+        if REDIS_URL and redis:
+            r = redis.from_url(REDIS_URL)
+            ps = r.pubsub()
+            ps.subscribe(f"records:user:{user_id}")
+            for message in ps.listen():
+                if message is None:
+                    continue
+                if message["type"] != "message":
+                    continue
+                data = message["data"]
+                if isinstance(data, bytes):
+                    data = data.decode("utf-8")
+                yield f"data: {data}\n\n"
+        else:
+            # fallback: simple polling inside stream (inefficient, single-process)
+            while True:
+                # send heartbeat to keep connection alive
+                yield ":\n\n"   # comment/keep-alive
+                time.sleep(5)
+
+    return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
+
+
+from flask import request, jsonify, abort, g, Response
+from datetime import datetime
+
+@app.post("/api/v1/records")
+@require_api_token(scopes_required=["records:create"])
+def api_create_record():
+    """
+    POST /api/v1/records
+    JSON body:
+      { "day":"YYYY-MM-DD", "sales":123.4, "expense":50.0, "source_id":"pos-123", "meta": {...} }
+    Headers:
+      Authorization: Bearer <token>
+      Idempotency-Key: <key>  -- önerilir
+    """
+    user_id = getattr(request, "api_user_id", None) or getattr(g, "api_user_id", None)
+    if not user_id:
+        return jsonify({"error":"no api user"}), 401
+
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = {k: v for k, v in request.form.items()}
+
+    day = (data.get("day") or "").strip() or datetime.now().strftime("%Y-%m-%d")
+    try:
+        datetime.strptime(day, "%Y-%m-%d")
+    except Exception:
+        return jsonify({"error":"invalid day format (YYYY-MM-DD)"}), 400
+
+    try:
+        sales = float(data.get("sales") or 0)
+        expense = float(data.get("expense") or 0)
+    except Exception:
+        return jsonify({"error":"invalid numeric fields"}), 400
+
+    profit = sales - expense
+    idempotency_key = request.headers.get("Idempotency-Key") or data.get("idempotency_key") or data.get("source_id")
+
+    conn = get_db()
+    try:
+        # --- idempotent update if source_id/idempotency_key matches ---
+        if idempotency_key:
+            row = conn.execute(
+                "SELECT id FROM records WHERE user_id = ? AND day = ? AND COALESCE(source_id,'') = ? LIMIT 1",
+                (int(user_id), day, idempotency_key)
+            ).fetchone()
+            if row:
+                conn.execute(
+                    "UPDATE records SET sales = ?, expense = ?, profit = ? WHERE id = ?",
+                    (sales, expense, profit, row["id"])
+                )
+                conn.commit()
+                new_id = row["id"]
+
+                # -> burada publish (update için)
+                payload = {"id": new_id, "day": day, "sales": sales, "expense": expense, "profit": profit}
+                try:
+                    publish_record_event(int(user_id), payload)
+                except Exception:
+                    app.logger.exception("publish_record_event failed")
+
+                return jsonify({"ok": True, "id": new_id, "day": day, "sales": sales, "expense": expense, "profit": profit})
+
+            else:
+                cur = conn.execute(
+                    "INSERT INTO records (user_id, day, sales, expense, profit, source_id) VALUES (?, ?, ?, ?, ?, ?)",
+                    (int(user_id), day, sales, expense, profit, idempotency_key)
+                )
+                conn.commit()
+                new_id = cur.lastrowid
+
+                # -> publish (insert ile)
+                payload = {"id": new_id, "day": day, "sales": sales, "expense": expense, "profit": profit}
+                try:
+                    publish_record_event(int(user_id), payload)
+                except Exception:
+                    app.logger.exception("publish_record_event failed")
+
+                return jsonify({"ok": True, "id": new_id, "day": day, "sales": sales, "expense": expense, "profit": profit})
+
+        else:
+            # fallback: upsert by user_id+day
+            existing = conn.execute(
+                "SELECT id FROM records WHERE user_id = ? AND day = ? LIMIT 1",
+                (int(user_id), day)
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    "UPDATE records SET sales = ?, expense = ?, profit = ? WHERE id = ?",
+                    (sales, expense, profit, existing["id"])
+                )
+                conn.commit()
+                new_id = existing["id"]
+
+                payload = {"id": new_id, "day": day, "sales": sales, "expense": expense, "profit": profit}
+                try:
+                    publish_record_event(int(user_id), payload)
+                except Exception:
+                    app.logger.exception("publish_record_event failed")
+
+                return jsonify({"ok": True, "id": new_id, "day": day, "sales": sales, "expense": expense, "profit": profit})
+
+            else:
+                cur = conn.execute(
+                    "INSERT INTO records (user_id, day, sales, expense, profit) VALUES (?, ?, ?, ?, ?)",
+                    (int(user_id), day, sales, expense, profit)
+                )
+                conn.commit()
+                new_id = cur.lastrowid
+
+                payload = {"id": new_id, "day": day, "sales": sales, "expense": expense, "profit": profit}
+                try:
+                    publish_record_event(int(user_id), payload)
+                except Exception:
+                    app.logger.exception("publish_record_event failed")
+
+                return jsonify({"ok": True, "id": new_id, "day": day, "sales": sales, "expense": expense, "profit": profit})
+    finally:
+        conn.close()
 
 @app.get("/api/records")
 @require_api_token(scopes_required=["records:read"])
 def api_records_list():
-    
+
     # request.api_user_id dekoratör tarafından atanıyorsa al, yoksa g.api_user_id kullan
     user_id = getattr(request, "api_user_id", None) or getattr(g, "api_user_id", None)
     if not user_id:
@@ -1952,7 +2167,7 @@ def api_records_list():
         })
     finally:
         conn.close()
-        return api_records_list()
+
 
 # ---------------- Run ----------------
 with app.app_context():
