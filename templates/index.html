@@ -265,35 +265,6 @@
   <!-- ===== KPI (realtime-ready) ===== -->
 <div class="grid">
   <div class="card">
-    <!-- TODAY SUMMARY -->
-    <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#0ea5e9,#22c55e);color:white;">
-      <div style="font-size:13px;opacity:.9;">
-        📅 <span id="today-date">{{ today_date }}</span>
-      </div>
-
-      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px">
-
-        <div>
-          <div style="font-size:12px;opacity:.9">{{ t.get("today_sales","Bugünkü satış") }}</div>
-          <div style="font-size:26px;font-weight:900">
-            <span id="today-sales">{{ '%.2f'|format(today_sales) }}</span> <span id="today-currency">{{ current_user.currency or currency }}</span>
-          </div>
-        </div>
-
-        <div>
-          <div style="font-size:12px;opacity:.9">{{ t.get("today_expense","Bugünkü gider") }}</div>
-          <div style="font-size:26px;font-weight:900">
-            <span id="today-expense">{{ '%.2f'|format(today_expense) }}</span> <span id="today-currency-exp">{{ current_user.currency or currency }}</span>
-          </div>
-        </div>
-
-        <div>
-          <div style="font-size:12px;opacity:.9">{{ t.get("today_profit","Bugünkü kâr") }}</div>
-          <div style="font-size:30px;font-weight:900">
-            <span id="today-profit">{{ '%.2f'|format(today_profit) }}</span> <span id="today-currency-profit">{{ current_user.currency or currency }}</span>
-          </div>
-        </div>
-
       </div>
     </div>
   </div>
@@ -385,38 +356,6 @@
 </a>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- TODAY SUMMARY -->
-<div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#0ea5e9,#22c55e);color:white;">
-  <div style="font-size:13px;opacity:.9;">
-    📅 {{ today_date }}
-  </div>
-
-  <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px">
-
-    <div>
-      <div style="font-size:12px;opacity:.9">{{ t.get("today_sales","Bugünkü satış") }}</div>
-      <div style="font-size:26px;font-weight:900">
-        {{ today_sales }} {{ current_user.currency or currency }}
-      </div>
-    </div>
-
-    <div>
-      <div style="font-size:12px;opacity:.9">{{ t.get("today_expense","Bugünkü gider") }}</div>
-      <div style="font-size:26px;font-weight:900">
-        {{ today_expense }} {{ current_user.currency or currency }}
-      </div>
-    </div>
-
-    <div>
-      <div style="font-size:12px;opacity:.9">{{ t.get("today_profit","Bugünkü kâr") }}</div>
-      <div style="font-size:30px;font-weight:900">
-        {{ today_profit }} {{ current_user.currency or currency }}
-      </div>
-    </div>
-
   </div>
 </div>
 
