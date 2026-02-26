@@ -211,7 +211,7 @@ I18N = {
         "live_status_prefix": "Canlı güncellemeler için bağlantı durumu:",
         "connecting": "Bağlanıyor...",
         "dashboard_live": "Dashboard (Canlı)",
-        "daily": "günlük / canlı"
+        "daily": "günlük / canlı",
 
         
 
@@ -348,7 +348,7 @@ I18N = {
         "live_status_prefix": "Liveanslutning:",
         "connecting": "Ansluter...",
         "dashboard_live": "Dashboard (Live)",
-        "daily": "daglig / live"
+        "daily": "daglig / live",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
@@ -484,7 +484,7 @@ I18N = {
         "live_status_prefix": "Live connection status:",
         "connecting": "Connecting...",
         "dashboard_live": "Dashboard (Live)",
-        "daily": "daily / live"
+        "daily": "daily / live",
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
