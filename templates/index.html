@@ -272,8 +272,6 @@
 
 <!-- ===== TOP ===== -->
 <div class="header">
-
-  {% include "_dashboard_panel.html" %}
 </div>
 <div class="grid">
   <div class="header-left">
@@ -360,22 +358,9 @@
 </a>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- ===== KPI ===== -->
-<div class="grid">
-  <div class="card">
-    <div>{{ t.get("total_sales","Toplam satış") }}</div>
-    <div class="kpi">{{ total_sales }} {{ current_user.currency or currency }}</div>
-  </div>
-  <div class="card">
-    <div>{{ t.get("total_expense","Toplam gider") }}</div>
-    <div class="kpi">{{ total_expense }} {{ current_user.currency or currency }}</div>
-  </div>
-  <div class="card">
-    <div>{{ t.get("total_profit","Toplam kâr") }}</div>
-    <div class="kpi profit">{{ total_profit }} {{ current_user.currency or currency }}</div>
+    {% include "_dashboard_panel.html" %}
+
   </div>
 </div>
 
