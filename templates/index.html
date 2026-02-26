@@ -272,6 +272,10 @@
 
 <!-- ===== TOP ===== -->
 <div class="header">
+
+  {% include "_dashboard_panel.html" %}
+</div>
+<div class="grid">
   <div class="header-left">
     <h1 style="margin:0;">{{ t.get("title","KarApp") }}</h1>
     <p class="sub" style="margin:8px 0 0 0;">{{ t.get("subtitle","") }}</p>
@@ -374,7 +378,7 @@
     <div class="kpi profit">{{ total_profit }} {{ current_user.currency or currency }}</div>
   </div>
 </div>
-{% include "_dashboard_panel.html" %}
+
 
   <!-- ===== FORM ===== -->
   <div class="card" style="margin-top:20px">

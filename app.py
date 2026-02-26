@@ -203,6 +203,16 @@ I18N = {
         "today_sales": "Bugünkü satış",
         "today_expense": "Bugünkü gider",
         "today_profit": "Bugünkü kâr",
+
+        "today_label": "Bugün",
+        "sales_label": "Satış",
+        "expense_label": "Gider",
+        "profit_label": "Kâr",
+        "live_status_prefix": "Canlı güncellemeler için bağlantı durumu:",
+        "connecting": "Bağlanıyor...",
+        "dashboard_live": "Dashboard (Canlı)",
+        "daily": "günlük / canlı"
+
         
 
         "lang_tr": "Türkçe",
@@ -331,6 +341,15 @@ I18N = {
         "today_expense": "Dagens kostnad",
         "today_profit": "Dagens vinst",
 
+        "today_label": "Idag",
+        "sales_label": "Försäljning",
+        "expense_label": "Kostnad",
+        "profit_label": "Vinst",
+        "live_status_prefix": "Liveanslutning:",
+        "connecting": "Ansluter...",
+        "dashboard_live": "Dashboard (Live)",
+        "daily": "daglig / live"
+
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
         "lang_en": "English",
@@ -457,6 +476,15 @@ I18N = {
         "today_sales": "Today's sales",
         "today_expense": "Today's expense",
         "today_profit": "Today's profit",
+
+        "today_label": "Today",
+        "sales_label": "Sales",
+        "expense_label": "Expense",
+        "profit_label": "Profit",
+        "live_status_prefix": "Live connection status:",
+        "connecting": "Connecting...",
+        "dashboard_live": "Dashboard (Live)",
+        "daily": "daily / live"
 
         "lang_tr": "Türkçe",
         "lang_sv": "Svenska",
