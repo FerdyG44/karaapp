@@ -1,0 +1,16 @@
+<div class="grid" style="gap:20px;display:flex;flex-wrap:wrap">
+  <div class="card" style="flex:1 1 280px;">
+    <div style="font-size:14px;color:#6b7280">{{ t.get("total_sales","Total sales") }}</div>
+    <div class="kpi" id="today-sales">{{ total_sales or 0 }} {{ current_user.currency or currency }}</div>
+  </div>
+  <div class="card" style="flex:1 1 280px;">
+    <div style="font-size:14px;color:#6b7280">{{ t.get("total_expense","Total expense") }}</div>
+    <div class="kpi" id="today-expense">{{ total_expense or 0 }} {{ current_user.currency or currency }}</div>
+  </div>
+  <div class="card" style="flex:1 1 280px;">
+    <div style="font-size:14px;color:#6b7280">{{ t.get("total_profit","Total profit") }}</div>
+    <div class="kpi" id="today-profit">{{ total_profit or 0 }} {{ current_user.currency or currency }}</div>
+  </div>
+</div>
+<!-- sse-status küçük bilgi alanı -->
+<div style="margin-top:12px;color:#6b7280">Canlı durumu: <span id="sse-status">Bağlanıyor...</span></div>
