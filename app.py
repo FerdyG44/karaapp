@@ -1982,6 +1982,32 @@ def publish_record_event(user_id, payload):
         except Exception:
             pass  # best-effort
 
+@app.route("/api/v1/stream")
+@login_required
+def stream():
+    def event_stream():
+        last_payload = None
+
+        while True:
+            data = get_live_data_for_user(current_user.id)
+            payload = json.dumps(data)
+
+            # sadece değişince gönder (Render için önemli)
+            if payload != last_payload:
+                yield f"data: {payload}\n\n"
+                last_payload = payload
+
+            time.sleep(2)
+
+    return Response(
+        stream_with_context(event_stream()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive"
+        }
+    )
 
 @app.get("/api/v1/stream")
 @require_api_token(scopes_required=[])   # or require login if only web clients
