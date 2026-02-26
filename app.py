@@ -1845,10 +1845,11 @@ def dashboard():
     today_date = datetime.now().strftime("%Y-%m-%d")
 
     return render_template("dashboard.html",
-                           lang=lang, t=t, currency=currency,
-                           raw_token=raw_token,
-                           today_date=today_date)
-
+                           lang=pick_lang(request),
+                           today_date=datetime.now().strftime("%Y-%m-%d"),
+                           currency=currency_for_lang(pick_lang(request)),
+                           raw_token=raw_token, 
+                           )
 
 @app.get("/api/tokens")
 @login_required

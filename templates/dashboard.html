@@ -1,4 +1,3 @@
-<!-- templates/dashboard.html -->
 <!doctype html>
 <html lang="{{ lang or 'tr' }}">
 <head>
@@ -10,28 +9,34 @@
     .card{background:#fff;padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.06);max-width:900px;margin:12px auto}
     .kpi{font-size:28px;font-weight:900}
     .kpi.small{font-size:18px}
-    .row{display:flex;gap:20px;flex-wrap:wrap}
+    .row{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+    .muted{color:#6b7280;font-size:13px}
+    .value{font-weight:800}
   </style>
 </head>
 <body>
   <div class="card">
     <h2>Dashboard (Canlı)</h2>
+
     <div class="row" style="margin-top:8px;">
       <div>
-        <div style="font-size:13px;color:#6b7280">Bugün</div>
+        <div class="muted">Bugün</div>
         <div id="today-date" class="kpi small">{{ today_date or "" }}</div>
       </div>
+
       <div>
-        <div style="font-size:13px;color:#6b7280">Satış</div>
-        <div id="today-sales" class="kpi">0 {{ current_user.currency or currency }}</div>
+        <div class="muted">Satış</div>
+        <div id="today-sales" class="kpi value">0 {{ (current_user.currency if current_user and current_user.currency else currency) }}</div>
       </div>
+
       <div>
-        <div style="font-size:13px;color:#6b7280">Gider</div>
-        <div id="today-expense" class="kpi">0 {{ current_user.currency or currency }}</div>
+        <div class="muted">Gider</div>
+        <div id="today-expense" class="kpi value">0 {{ (current_user.currency if current_user and current_user.currency else currency) }}</div>
       </div>
+
       <div>
-        <div style="font-size:13px;color:#6b7280">Kâr</div>
-        <div id="today-profit" class="kpi">0 {{ current_user.currency or currency }}</div>
+        <div class="muted">Kâr</div>
+        <div id="today-profit" class="kpi value">0 {{ (current_user.currency if current_user and current_user.currency else currency) }}</div>
       </div>
     </div>
 
@@ -42,13 +47,17 @@
 
   <!-- SCRIPTS -->
   <script>
-    // Eğer server-side session auth kullanıyorsan api_key parametresi boş bırak.
-    const use_token = {{ 'true' if raw_token else 'false' }};
-    const rawToken = {{ ('"' + raw_token + '"') if raw_token else '""' }};
+    // raw_token server tarafından template'e verildiyse kullan; yoksa boş string.
+    // tojson ile güvenli JS string literal elde ediyoruz.
+    const rawToken = {{ raw_token|default(None)|tojson }};
+    const useToken = (rawToken !== null && rawToken !== "");
 
-    const streamUrl = use_token
+    // stream URL: token varsa query param, yoksa sadece /api/v1/stream (session cookie ile auth)
+    const streamUrl = useToken
       ? "/api/v1/stream?api_key=" + encodeURIComponent(rawToken)
-      : "/api/v1/stream"; // session-cookie ile doğrulama yapan endpoint
+      : "/api/v1/stream";
+
+    const currencyLabel = {{ (current_user.currency if (current_user and current_user.currency) else currency)|tojson }};
 
     const evtSource = new EventSource(streamUrl);
 
@@ -57,27 +66,28 @@
     };
 
     evtSource.onerror = function(e) {
-      document.getElementById('sse-status').innerText = "Hata / kopma (console'u kontrol et)";
+      document.getElementById('sse-status').innerText = "Hata / kopma (console'u kontrol et). Tekrar deniyor...";
       console.error("SSE error", e);
     };
 
+    // Gelen payload beklenen shape: { id, day, sales, expense, profit }
     evtSource.onmessage = function(e) {
-      // e.data bir JSON string olacak (publish_record_event ile aynı shape)
       try {
         const payload = JSON.parse(e.data);
         console.log("SSE payload:", payload);
+
         if (payload.day) {
           document.getElementById('today-date').innerText = payload.day;
         }
-        if (payload.sales !== undefined) {
-          document.getElementById('today-sales').innerText = payload.sales + " {{ current_user.currency or currency }}";
-        }
-        if (payload.expense !== undefined) {
-          document.getElementById('today-expense').innerText = payload.expense + " {{ current_user.currency or currency }}";
-        }
-        if (payload.profit !== undefined) {
-          document.getElementById('today-profit').innerText = payload.profit + " {{ current_user.currency or currency }}";
-        }
+
+        // sayıları güvenli gösterme: eğer number değilse 0'a düşür
+        const sales = (typeof payload.sales === "number") ? payload.sales : parseFloat(payload.sales) || 0;
+        const expense = (typeof payload.expense === "number") ? payload.expense : parseFloat(payload.expense) || 0;
+        const profit = (typeof payload.profit === "number") ? payload.profit : parseFloat(payload.profit) || (sales - expense);
+
+        document.getElementById('today-sales').innerText = sales.toFixed(2) + " " + currencyLabel;
+        document.getElementById('today-expense').innerText = expense.toFixed(2) + " " + currencyLabel;
+        document.getElementById('today-profit').innerText = profit.toFixed(2) + " " + currencyLabel;
       } catch (err) {
         console.error("SSE parse error", err, e.data);
       }
