@@ -1,16 +1,117 @@
-<div class="grid" style="gap:20px;display:flex;flex-wrap:wrap">
-  <div class="card" style="flex:1 1 280px;">
-    <div style="font-size:14px;color:#6b7280">{{ t.get("total_sales","Total sales") }}</div>
-    <div class="kpi" id="today-sales">{{ total_sales or 0 }} {{ current_user.currency or currency }}</div>
+{# templates/_dashboard_panel.html - sadece gömülebilir fragment #}
+<div class="card" id="dashboard-panel" style="max-width:1200px;margin:12px auto" data-currency="{{ (current_user.currency if (current_user and current_user.currency) else currency)|e }}" data-api-key="{{ raw_token|default('')|e }}">
+  <h2 style="margin:0 0 8px 0;">Dashboard (Canlı)</h2>
+
+  <div class="row" style="margin-top:8px; display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
+    <div>
+      <div class="muted">Bugün</div>
+      <div id="today-date" class="kpi small">{{ today_date or "" }}</div>
+    </div>
+
+    <div>
+      <div class="muted">Satış</div>
+      <div id="today-sales" class="kpi value">0 {{ (current_user.currency if current_user and current_user.currency else currency) }}</div>
+    </div>
+
+    <div>
+      <div class="muted">Gider</div>
+      <div id="today-expense" class="kpi value">0 {{ (current_user.currency if current_user and current_user.currency else currency) }}</div>
+    </div>
+
+    <div>
+      <div class="muted">Kâr</div>
+      <div id="today-profit" class="kpi value">0 {{ (current_user.currency if current_user and current_user.currency else currency) }}</div>
+    </div>
   </div>
-  <div class="card" style="flex:1 1 280px;">
-    <div style="font-size:14px;color:#6b7280">{{ t.get("total_expense","Total expense") }}</div>
-    <div class="kpi" id="today-expense">{{ total_expense or 0 }} {{ current_user.currency or currency }}</div>
+
+  <div style="margin-top:14px;color:#6b7280">
+    Canlı güncellemeler için bağlantı durumu: <span id="sse-status">Bağlanıyor...</span>
   </div>
-  <div class="card" style="flex:1 1 280px;">
-    <div style="font-size:14px;color:#6b7280">{{ t.get("total_profit","Total profit") }}</div>
-    <div class="kpi" id="today-profit">{{ total_profit or 0 }} {{ current_user.currency or currency }}</div>
+
+  <!-- templates/_dashboard_panel.html -->
+<div style="margin-top:16px; display:flex; gap:18px; flex-wrap:wrap; align-items:stretch;">
+  <div style="flex:1 1 260px; background:#fff; border-radius:10px; padding:18px; box-shadow:0 6px 18px rgba(0,0,0,.06);">
+    <div style="font-size:13px;color:#6b7280">Toplam satış (günlük / canlı)</div>
+    <div id="today-sales" style="font-weight:800;font-size:28px;margin-top:6px;">
+      {{ total_sales or 0 }} {{ (current_user.currency if (current_user and current_user.currency) else currency) }}
+    </div>
+  </div>
+
+  <div style="flex:1 1 260px; background:#fff; border-radius:10px; padding:18px; box-shadow:0 6px 18px rgba(0,0,0,.06);">
+    <div style="font-size:13px;color:#6b7280">Toplam gider (günlük / canlı)</div>
+    <div id="today-expense" style="font-weight:800;font-size:28px;margin-top:6px;">
+      {{ total_expense or 0 }} {{ (current_user.currency if (current_user and current_user.currency) else currency) }}
+    </div>
+  </div>
+
+  <div style="flex:1 1 260px; background:#fff; border-radius:10px; padding:18px; box-shadow:0 6px 18px rgba(0,0,0,.06);">
+    <div style="font-size:13px;color:#6b7280">Toplam kâr (günlük / canlı)</div>
+    <div id="today-profit" style="font-weight:800;font-size:28px;margin-top:6px;color:#17a34a;">
+      {{ total_profit or 0 }} {{ (current_user.currency if (current_user and current_user.currency) else currency) }}
+    </div>
   </div>
 </div>
-<!-- sse-status küçük bilgi alanı -->
-<div style="margin-top:12px;color:#6b7280">Canlı durumu: <span id="sse-status">Bağlanıyor...</span></div>
+
+<div style="margin-top:10px;color:#6b7280;font-size:13px;">
+  Canlı güncellemeler durumu: <span id="sse-status">Bağlanıyor...</span>
+</div>
+</div>
+
+<script>
+  // raw_token server tarafından template'e verildiyse kullan; yoksa boş string.
+    const rawToken = document.getElementById('dashboard-panel').dataset.apiKey || "";
+    const useToken = (rawToken !== null && rawToken !== "");
+
+  const streamUrl = useToken
+    ? "/api/v1/stream?api_key=" + encodeURIComponent(rawToken)
+    : "/api/v1/stream";
+
+  // serialize currency once to avoid inline template expressions inside expressions
+  const currency = document.getElementById('dashboard-panel').dataset.currency || "";
+
+  const evtSource = new EventSource(streamUrl);
+
+  evtSource.onopen = function() {
+    const el = document.getElementById('sse-status');
+    if (el) el.innerText = "Bağlandı";
+  };
+
+  evtSource.onerror = function(e) {
+    const el = document.getElementById('sse-status');
+    if (el) el.innerText = "Hata / kopma (console'u kontrol et). Tekrar deniyor...";
+    console.error("SSE error", e);
+  };
+
+  evtSource.onmessage = function(e) {
+    try {
+      const payload = JSON.parse(e.data);
+      // Konsolda da gör
+      console.log("SSE payload:", payload);
+
+      if (payload.day) {
+        document.getElementById('today-date').innerText = payload.day;
+      }
+      if (payload.sales !== undefined) {
+        document.getElementById('today-sales').innerText = payload.sales + " " + currency;
+      }
+      if (payload.expense !== undefined) {
+        document.getElementById('today-expense').innerText = payload.expense + " " + currency;
+      }
+      if (payload.profit !== undefined) {
+        document.getElementById('today-profit').innerText = payload.profit + " " + currency;
+      }
+    } catch (err) {
+      console.error("SSE parse error", err, e.data);
+    }
+  };
+</script>
+
+<style>
+/* küçük stil takviyesi (index sayfa stilinle çatışırsa kaldırabilirsin) */
+.kpi{font-size:28px;font-weight:900}
+.kpi.small{font-size:18px}
+.row{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.muted{color:#6b7280;font-size:13px}
+.value{font-weight:800}
+.card{background:#fff;padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+</style>
