@@ -1946,105 +1946,95 @@ def api_tokens_revoke(token_id):
         conn.close()
     return redirect(url_for("api_tokens_list", lang=lang))
 
-from flask import Response, stream_with_context
-import json
-import time
-import queue
+# --- token-aware SSE stream (replace existing api_stream) ---
+import json, time
+from flask import Response, request, stream_with_context
+from helpers import hash_token, get_db
+from flask_login import current_user
 
-# global subscribers dict: user_id -> list of queue.Queue
-SUBSCRIBERS = {}
-
-def subscribe(user_id):
-    q = queue.Queue()
-    SUBSCRIBERS.setdefault(user_id, []).append(q)
-    return q
-
-def unsubscribe(user_id, q):
-    lst = SUBSCRIBERS.get(user_id) or []
+def _validate_api_key_and_get_user(api_key_raw):
+    """Return user_id if api_key valid and active, else None"""
+    if not api_key_raw:
+        return None
     try:
-        lst.remove(q)
-    except ValueError:
-        pass
-    if not lst:
-        SUBSCRIBERS.pop(user_id, None)
-
-def publish_record_event(user_id, payload):
-    """
-    payload: dict -> will be JSONified when sending
-    This function is used by your API create record (after insert) to send live updates.
-    """
-    import json
-    lst = SUBSCRIBERS.get(user_id) or []
-    msg = json.dumps(payload)
-    for q in lst:
+        h = hash_token(api_key_raw)
+    except Exception:
+        return None
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT user_id, is_active FROM api_tokens WHERE token = ? LIMIT 1",
+            (h,)
+        ).fetchone()
+        if not row:
+            return None
+        if row["is_active"] == 0:
+            return None
+        return int(row["user_id"])
+    finally:
         try:
-            q.put_nowait(msg)
-        except Exception:
-            pass  # best-effort
+            conn.close()
+        except:
+            pass
 
-@app.route("/api/v1/stream")
-@login_required
-def stream():
-    def event_stream():
-        last_payload = None
-
-        while True:
-            data = get_live_data_for_user(current_user.id)
-            payload = json.dumps(data)
-
-            # sadece değişince gönder (Render için önemli)
-            if payload != last_payload:
-                yield f"data: {payload}\n\n"
-                last_payload = payload
-
-            time.sleep(2)
-
-    return Response(
-        stream_with_context(event_stream()),
-        mimetype="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive"
-        }
-    )
+def get_live_data_for_user(user_id):
+    """Return a simple payload for the SSE. You can replace with your own logic."""
+    try:
+        conn = get_db()
+        today = time.strftime("%Y-%m-%d")
+        r = conn.execute(
+            "SELECT sales, expense, profit, day FROM records WHERE user_id = ? AND day = ? LIMIT 1",
+            (int(user_id), today)
+        ).fetchone()
+        if r:
+            return {"day": r["day"], "sales": float(r["sales"] or 0.0), "expense": float(r["expense"] or 0.0), "profit": float(r["profit"] or 0.0)}
+        else:
+            return {"day": today, "sales": 0.0, "expense": 0.0, "profit": 0.0}
+    except Exception:
+        return {"day": time.strftime("%Y-%m-%d"), "sales": 0.0, "expense": 0.0, "profit": 0.0}
+    finally:
+        try:
+            conn.close()
+        except:
+            pass
 
 @app.get("/api/v1/stream")
-@require_api_token(scopes_required=[])   # or require login if only web clients
 def api_stream():
-    """
-    Server-Sent Events stream.
-    Client connects with Authorization header (or api_key query param).
-    For production use Redis subscribe per-user channel.
-    """
-    user_id = getattr(request, "api_user_id", None)
+    # 1) get token from query param or Authorization header
+    api_key = request.args.get("api_key") or ""
+    if not api_key:
+        auth = request.headers.get("Authorization", "")
+        if auth and auth.startswith("Bearer "):
+            api_key = auth.split(" ",1)[1].strip()
+
+    user_id = None
+    if api_key:
+        user_id = _validate_api_key_and_get_user(api_key)
+
+    # fallback to session-auth if token missing/invalid
     if not user_id:
-        return jsonify({"error":"no api user"}), 401
+        try:
+            if current_user and getattr(current_user, "is_authenticated", False):
+                user_id = int(current_user.id)
+        except Exception:
+            user_id = None
+
+    if not user_id:
+        # ÖNEMLİ: redirect yerine 401 dönüyoruz, çünkü EventSource redirect'i takip edemez.
+        return Response("Unauthorized\n", status=401, mimetype="text/plain")
 
     def event_stream():
-        # if redis available, subscribe:
-        if REDIS_URL and redis:
-            r = redis.from_url(REDIS_URL)
-            ps = r.pubsub()
-            ps.subscribe(f"records:user:{user_id}")
-            for message in ps.listen():
-                if message is None:
-                    continue
-                if message["type"] != "message":
-                    continue
-                data = message["data"]
-                if isinstance(data, bytes):
-                    data = data.decode("utf-8")
-                yield f"data: {data}\n\n"
-        else:
-            # fallback: simple polling inside stream (inefficient, single-process)
-            while True:
-                # send heartbeat to keep connection alive
-                yield ":\n\n"   # comment/keep-alive
-                time.sleep(5)
+        while True:
+            payload = get_live_data_for_user(int(user_id))
+            yield f"data: {json.dumps(payload)}\n\n"
+            time.sleep(2)
 
-    return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
-
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no"
+    }
+    return Response(stream_with_context(event_stream()), mimetype="text/event-stream", headers=headers)
+# --- end stream ---
 
 from flask import request, jsonify, abort, g, Response
 from datetime import datetime
