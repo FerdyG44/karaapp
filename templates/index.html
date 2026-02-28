@@ -30,8 +30,6 @@
 
     .wrap{max-width:1200px;margin:0 auto;padding:28px}
 
-    
-
     @media (max-width: 900px){
       .topbar{flex-direction:column; align-items:stretch;}
       .top-right{align-items:flex-start;}
@@ -87,7 +85,6 @@
       box-shadow:0 0 0 2px rgba(37,99,235,.10) inset;
     }
 
-    
     /* ===== KPI ===== */
     .grid{
       display:grid;
@@ -105,7 +102,6 @@
       font-weight:900;
     }
     .profit{color:#16a34a}
-
 
     /* ===== FORM ===== */
     .form-grid{
@@ -136,64 +132,71 @@
     canvas{width:100%!important;height:320px!important}
     canvas{width:100%!important;height:320px!important}
 
-/* ===== Fixed header (top-right always at corner) ===== */
-.header{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:16px;
-  margin-bottom:18px;
-}
+    /* ===== Fixed header (top-right always at corner) ===== */
+    .header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      margin-bottom:18px;
+    }
 
-.header-left{max-width:520px;}
+    .header-left{max-width:520px;}
 
-.header-right{
-  margin-left:auto;
-  display:flex;
-  align-items:flex-start;
-  justify-content:flex-end;
-}
+    .header-right{
+      margin-left:auto;
+      display:flex;
+      align-items:flex-start;
+      justify-content:flex-end;
+    }
 
-.header-row{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:10px;
-}
+    .header-row{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap:10px;
+    }
 
-.header-group{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-  align-items:center;
-}
+    .header-group{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
 
-/* mobile */
-@media (max-width: 900px){
-  .header{flex-direction:column;}
-  .header-row{align-items:flex-start;}
-  .header-group{justify-content:flex-start;}
-}
+    /* mobile */
+    @media (max-width: 900px){
+      .header{flex-direction:column;}
+      .header-row{align-items:flex-start;}
+      .header-group{justify-content:flex-start;}
+    }
 
-        .btn-outline{
-        border:1px solid var(--line);
-        background:#fff;
-        padding:8px 12px;
-        order-radius:999px;
-        font-weight:800;
-        font-size:14px;
-        text-decoration:none;
-        color:inherit;
-}
+    .btn-outline{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:14px;
+      text-decoration:none;
+      color:inherit;
+    }
 
-        .btn-outline.active{
-        border-color: var(--primary);
-        box-shadow: 0 0 0 2px rgba(37,99,235,.12) inset;
-        background: #eef2ff;
-}
+    .btn-outline.active{
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37,99,235,.12) inset;
+      background: #eef2ff;
+    }
 
-</style>
+    /* ---- custom_theme overrides (optional) ---- */
+    /* if you have /static/css/custom_theme.css it will override more styles */
+  </style>
+
+  <!-- existing css -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <!-- custom theme override -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom_theme.css') }}">
 </head>
 
 <script>
@@ -262,108 +265,72 @@
 <body>
 <div class="wrap">
 
-  <!-- ===== KPI (realtime-ready) ===== -->
-<div class="grid">
-  <div class="card">
+  <!-- =========================
+       NEW APP HEADER + KPI
+       (placed at top of page)
+       ========================= -->
+  <div class="app-header" style="margin-bottom:18px; border-bottom-left-radius:18px; border-bottom-right-radius:18px;">
+    <div class="wrap" style="display:flex;gap:20px;align-items:flex-start;justify-content:space-between;padding:18px 0;">
+      <div>
+        <h1 style="margin:0;font-size:40px;letter-spacing:-0.6px;font-weight:800;color:#fff">ProfitApp</h1>
+        <p class="sub" style="margin:8px 0 0 0;color:rgba(255,255,255,0.95);font-weight:600;">Enter daily sales and expenses and see profit instantly.</p>
+        <div style="margin-top:10px;color:rgba(255,255,255,0.9);font-weight:700">
+          👋 Welcome, <span style="font-weight:900">{{ current_user.username }}</span> &nbsp;|&nbsp; Plan: <span style="font-weight:900">{{ current_user.plan|capitalize }}</span>
+        </div>
+      </div>
+
+      <div class="header-controls" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <a class="pill-btn" href="{{ url_for('index', lang='tr') }}" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;border-radius:999px;font-weight:700;text-decoration:none;">Türkçe</a>
+        <a class="pill-btn" href="{{ url_for('index', lang='sv') }}" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;border-radius:999px;font-weight:700;text-decoration:none;">Svenska</a>
+        <a class="pill-btn" href="{{ url_for('index', lang='en') }}" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;border-radius:999px;font-weight:700;text-decoration:none;">English</a>
+
+        <a class="pill-btn" href="{{ url_for('account', lang=lang) }}" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;border-radius:999px;font-weight:700;text-decoration:none;">Account</a>
+
+        <a class="pill-btn" href="{{ url_for('settings', lang=lang) }}" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;border-radius:999px;font-weight:700;text-decoration:none;">Settings</a>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ===== TOP ===== -->
-<div class="header">
-</div>
-<div class="grid">
-  <div class="header-left">
-    <h1 style="margin:0;">{{ t.get("title","KarApp") }}</h1>
-    <p class="sub" style="margin:8px 0 0 0;">{{ t.get("subtitle","") }}</p>
-  <div style="margin-top:10px; font-weight:700; color:var(--muted);">
-  👋 {{ t.get("welcome","Welcome") }}, <span style="color:var(--text)">{{ current_user.username }}</span>
-  </div>
-  <div style="margin-top:6px; font-size:13px; font-weight:700;">
-  Plan: {{ current_user.plan|capitalize }}
-  </div>
-  </div>
-
-  <div class="header-right">
-    <div class="header-row">
-      <!-- LANG -->
-      <div class="header-group">
-        <a class="pill {{ 'active' if lang=='tr' else '' }}" href="{{ url_for('index', lang='tr', all=('1' if show_all else None)) }}">🇹🇷 Türkçe</a>
-        <a class="pill {{ 'active' if lang=='sv' else '' }}" href="{{ url_for('index', lang='sv', all=('1' if show_all else None)) }}">🇸🇪 Svenska</a>
-        <a class="pill {{ 'active' if lang=='en' else '' }}" href="{{ url_for('index', lang='en', all=('1' if show_all else None)) }}">🇬🇧 English</a>
+  <div class="container" style="max-width:1200px;margin:0 auto;padding:0 18px 40px;">
+    <!-- KPI row -->
+    <div class="kpi-row" style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;">
+      <div class="kpi-block sales card" style="flex:1 1 320px;border-left:6px solid rgba(37,99,235,0.8);">
+        <div class="muted" style="color:var(--muted);font-weight:700">Today's sales</div>
+        <div class="big" id="today-sales" style="font-size:26px;font-weight:900;margin-top:8px;color:var(--kpi-color)">{{ today_sales or "0.00" }} {{ currency }}</div>
+        <div style="margin-top:8px;color:var(--muted);" id="today-date">{{ today_date or today }}</div>
       </div>
 
-      <!-- ACCOUNT/SETTINGS -->
-       <div class="header-group">
-
-<a class="btn-outline" href="{{ url_for('account', lang=lang) }}">
-  👤 {{ t.get("account","Hesabım") }}
-</a>
-
-<a class="btn-outline" href="{{ url_for('settings', lang=lang) }}">
-  ⚙️ {{ t.get("settings","Ayarlar") }}
-</a>
+      <div class="kpi-block expense card" style="flex:1 1 320px;border-left:6px solid rgba(239,68,68,0.9);">
+        <div class="muted" style="color:var(--muted);font-weight:700">Today's expense</div>
+        <div class="big" id="today-expense" style="font-size:26px;font-weight:900;margin-top:8px;color:var(--kpi-color)">{{ today_expense or "0.00" }} {{ currency }}</div>
       </div>
-    </div>
-  </div>
-</div>
-      <!-- ACTIONS -->
-      <div class="header-group">
 
-        <a class="btn-outline"
-   href="{{ url_for('export', lang=lang, fmt='csv', all=('1' if show_all else None), start=start, end=end, range=range_days) }}">
-  ⬇️ CSV
-</a>
-
-        <a class="btn-outline"
-   href="{{ url_for('export', lang=lang, fmt='xlsx', all=('1' if show_all else None), start=start, end=end, range=range_days) }}">
-  ⬇️ Excel
-</a>
-
-      <a class="btn-outline {{ 'active' if selected_range=='30' else '' }}"
-        href="{{ url_for('index', lang=lang, range='30', all=('1' if show_all else None)) }}">30</a>
-
-      <a class="btn-outline {{ 'active' if selected_range=='90' else '' }}"
-        href="{{ url_for('index', lang=lang, range='90', all=('1' if show_all else None)) }}">90</a>
-
-      <a class="btn-outline {{ 'active' if selected_range=='365' else '' }}"
-        href="{{ url_for('index', lang=lang, range='365', all=('1' if show_all else None)) }}">365</a>
-
-      <a class="btn-outline {{ 'active' if selected_range=='' else '' }}"
-   href="{{ url_for('index', lang=lang, all=('1' if show_all else None)) }}">
-  {{ t.get("all","Tümü") }}
-</a>
-
-
-{% if current_user.is_admin %}
-  <a class="btn-outline" href="{{ url_for('index', lang=lang, all='1') }}">
-    {{ t.get("all_records","All records") }}
-  </a>
-        <a class="btn-outline" href="{{ url_for('admin_users', lang=lang) }}">
-    {{ t.get("manage_users","Manage users") }}
-  </a>
-  </div>
-  <a class="btn-outline" href="{{ url_for('api_tokens_list', lang=lang) }}">API Tokens</a>
-
-{% endif %}
-
-      {% if current_user.plan == 'free' %}
-      <a class="btn-outline" href="{{ url_for('billing', lang=lang) }}">
-        ⭐ {{ t.get("go_pro","Pro’ya geç") }}
-      </a>
-      {% endif %}
-        <a class="btn-outline" href="{{ url_for('logout', lang=lang) }}">
-  {{ t.get("logout","Çıkış") }}
-</a>
+      <div class="kpi-block profit card" style="flex:1 1 320px;border-left:6px solid #10b981;">
+        <div class="muted" style="color:var(--muted);font-weight:700">Today's profit</div>
+        <div class="big" id="today-profit" style="font-size:26px;font-weight:900;margin-top:8px;color:var(--accent, #10b981)">{{ today_profit or "0.00" }} {{ currency }}</div>
       </div>
     </div>
 
+    <!-- totals -->
+    <div style="margin-top:4px; display:flex; gap:18px; flex-wrap:wrap;">
+      <div class="card" style="flex:2 1 320px;">
+        <div class="kpi-label" style="color:var(--muted);font-weight:700">Total sales</div>
+        <div class="kpi-value" style="font-size:22px;font-weight:800">{{ total_sales or "0.00" }} {{ currency }}</div>
+      </div>
+      <div class="card" style="flex:2 1 320px;">
+        <div class="kpi-label" style="color:var(--muted);font-weight:700">Total expense</div>
+        <div class="kpi-value" style="font-size:22px;font-weight:800">{{ total_expense or "0.00" }} {{ currency }}</div>
+      </div>
+      <div class="card" style="flex:2 1 320px;">
+        <div class="kpi-label" style="color:var(--muted);font-weight:700">Total profit</div>
+        <div class="kpi-value" style="font-size:22px;font-weight:800;color:var(--accent, #10b981)">{{ total_profit or "0.00" }} {{ currency }}</div>
+      </div>
+    </div>
+
+    <!-- include the existing dashboard panel if you use it -->
     {% include "_dashboard_panel.html" %}
-
   </div>
-</div>
-
+  <!-- ========================= END APP HEADER + KPI ========================= -->
 
   <!-- ===== FORM ===== -->
   <div class="card" style="margin-top:20px">
@@ -371,7 +338,7 @@
     <form method="post" action="{{ url_for('index_post', lang=lang) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="form-grid">
-        <input type="date" name="day" required>
+        <input type="date" name="day" required value="{{ today_date }}">
         <input type="number" step="0.01" name="sales" placeholder="{{ t.get('sales','Satış') }}" required>
         <input type="number" step="0.01" name="expense" placeholder="{{ t.get('expense','Gider') }}" required>
         <button type="submit">{{ t.get("save","Kaydet") }}</button>
