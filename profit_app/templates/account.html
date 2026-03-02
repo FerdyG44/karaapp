@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ t.account }} – ProfitApp</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .account-container {
+            margin: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .details {
+            font-size: 16px;
+            margin: 10px 0;
+            color: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div class="account-container">
+        <h1>{{ t.account }}</h1>
+        <p><a href="{{ url_for('index') }}">{{ t.back_to_dashboard }}</a></p>
+        <div class="details">{{ t.username }}: <strong>{{ user.username }}</strong></div>
+        <div class="details">{{ t.plan }}: <strong>{{ user.plan }}</strong></div>
+        <p>{{ t.account_placeholder }}</p>
+        <hr />
+        <!-- Username change form -->
+        <h2>{{ t.change_username_title }}</h2>
+        <form id="username-form">
+            <label for="new-username">{{ t.new_username }}:</label><br />
+            <input type="text" id="new-username" required /><br />
+            <label for="confirm-username">{{ t.confirm_username }}:</label><br />
+            <input type="text" id="confirm-username" required /><br />
+            <button type="submit">{{ t.change }}</button>
+        </form>
+        <div id="username-message" style="margin-top: 10px; font-size: 14px;"></div>
+        <hr />
+        <!-- Password change form -->
+        <h2>{{ t.change_password_title }}</h2>
+        <form id="password-form">
+            <label for="new-pass">{{ t.new_password }}:</label><br />
+            <input type="password" id="new-pass" required /><br />
+            <label for="confirm-pass">{{ t.confirm_password }}:</label><br />
+            <input type="password" id="confirm-pass" required /><br />
+            <button type="submit">{{ t.change }}</button>
+        </form>
+        <div id="password-message" style="margin-top: 10px; font-size: 14px;"></div>
+    </div>
+    <script>
+    // Handle password change
+    document.getElementById('password-form').addEventListener('submit', async function(ev) {
+        ev.preventDefault();
+        const newPass = document.getElementById('new-pass').value;
+        const confirmPass = document.getElementById('confirm-pass').value;
+        const res = await fetch('/api/change_password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_password: newPass, confirm_password: confirmPass })
+        });
+        const data = await res.json();
+        const msgDiv = document.getElementById('password-message');
+        if (!res.ok || !data.success) {
+            msgDiv.textContent = data.error || 'Error';
+            msgDiv.style.color = 'red';
+        } else {
+            msgDiv.textContent = data.message || 'Success';
+            msgDiv.style.color = 'green';
+            document.getElementById('new-pass').value = '';
+            document.getElementById('confirm-pass').value = '';
+        }
+    });
+    // Handle username change
+    document.getElementById('username-form').addEventListener('submit', async function(ev) {
+        ev.preventDefault();
+        const newUser = document.getElementById('new-username').value;
+        const confirmUser = document.getElementById('confirm-username').value;
+        const res = await fetch('/api/change_username', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_username: newUser, confirm_username: confirmUser })
+        });
+        const data = await res.json();
+        const msgDiv = document.getElementById('username-message');
+        if (!res.ok || !data.success) {
+            msgDiv.textContent = data.error || 'Error';
+            msgDiv.style.color = 'red';
+        } else {
+            msgDiv.textContent = data.message || 'Success';
+            msgDiv.style.color = 'green';
+            document.getElementById('new-username').value = '';
+            document.getElementById('confirm-username').value = '';
+            // Optionally update displayed username
+            document.querySelector('.details strong').textContent = newUser;
+        }
+    });
+    </script>
+</body>
+</html>

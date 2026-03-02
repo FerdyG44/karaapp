@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ t.api_tokens_title }} – ProfitApp</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .tokens-container {
+            margin: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .tokens-container h1 {
+            margin-top: 0;
+        }
+        .token-list {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #2d3748;
+            word-break: break-all;
+        }
+        button.generate {
+            padding: 8px 16px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            background: #553c9a;
+            color: #fff;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="tokens-container">
+        <h1>{{ t.api_tokens_title }}</h1>
+        <p>{{ t.logged_in_as }} {{ user.username }} (<a href="{{ url_for('index') }}">{{ t.back_to_dashboard }}</a>)</p>
+        {% if tokens %}
+        <div class="token-list">
+            {% for token in tokens %}
+                <div>{{ token }}</div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>{{ t.no_tokens }}</p>
+        {% endif %}
+        <!-- Plan notice -->
+        <p style="margin-top:10px; font-size:14px; color:#718096;">
+            {% if user.plan == 'Free' %}
+                {{ t.free_plan_notice }}
+            {% else %}
+                {{ t.pro_plan_notice }}
+            {% endif %}
+        </p>
+        <button class="generate" id="generate-token">{{ t.generate_token }}</button>
+    </div>
+    <script>
+        document.getElementById('generate-token').addEventListener('click', async () => {
+            try {
+                const res = await fetch('{{ url_for('api_generate_token') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: {{ user.id }} })
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    alert(data.error || 'Failed to generate token');
+                    return;
+                }
+                alert('New token generated: ' + data.token);
+                location.reload();
+            } catch (err) {
+                alert('Error: ' + err);
+            }
+        });
+    </script>
+</body>
+</html>

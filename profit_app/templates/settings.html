@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ t.settings }} – ProfitApp</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .settings-container {
+            margin: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        h1 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <h1>{{ t.settings }}</h1>
+        <p><a href="{{ url_for('index') }}">{{ t.back_to_dashboard }}</a></p>
+        <p>{{ t.settings_placeholder }}</p>
+        <hr />
+        <h2>{{ t.select_language }}</h2>
+        <form id="language-form">
+            <label for="lang-select">{{ t.select_language }}:</label>
+            <select id="lang-select" name="lang-select">
+                <option value="en" {% if session.get('lang', 'en') == 'en' %}selected{% endif %}>English</option>
+                <option value="tr" {% if session.get('lang', 'en') == 'tr' %}selected{% endif %}>Türkçe</option>
+                <option value="sv" {% if session.get('lang', 'en') == 'sv' %}selected{% endif %}>Svenska</option>
+            </select>
+            <button type="submit">{{ t.save }}</button>
+        </form>
+        <div id="lang-message" style="margin-top: 10px; font-size: 14px;"></div>
+    </div>
+    <script>
+    document.getElementById('language-form').addEventListener('submit', function(ev) {
+        ev.preventDefault();
+        const lang = document.getElementById('lang-select').value;
+        // Redirect via set_lang to persist language and reload
+        window.location.href = '/set_lang?lang=' + encodeURIComponent(lang) + '&next=' + encodeURIComponent(window.location.pathname);
+    });
+    </script>
+</body>
+</html>

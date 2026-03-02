@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProfitApp Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <h1 class="app-title">ProfitApp</h1>
+            <!-- Removed tagline as manual entry is deprecated and POS integration provides data -->
+            <div class="user-info">
+                <span>👋 {{ t.welcome }}, {{ user.username }}</span>
+                <span class="plan">{{ t.plan }}: {{ user.plan }}</span>
+            </div>
+            <div class="nav-buttons">
+                {% if user.is_admin %}
+                <a href="{{ url_for('tokens_page') }}" class="api-button">{{ t.tokens }}</a>
+                {% endif %}
+                {% if user.plan != 'Pro' %}
+                <button id="go-pro-btn" class="pro-button" title="{{ t.go_pro_hint }}" data-user-id="{{ user.id }}">{{ t.go_pro }} ⭐</button>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="logout-button">{{ t.logout }}</a>
+            </div>
+        </div>
+        <div class="header-right">
+            <!-- Removed language buttons; language selection now via Settings page -->
+            <div class="account-buttons">
+                <a href="{{ url_for('account_page') }}" title="Account">{{ t.account }}</a>
+                <a href="{{ url_for('settings_page') }}" title="Settings">{{ t.settings }}</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="controls-row">
+        <div class="export-buttons">
+            <button id="export-csv" title="Download CSV">CSV</button>
+            <button id="export-excel" title="Download Excel">Excel</button>
+        </div>
+        <div class="filter-buttons">
+            <!-- Quick date range filters.  Each button sets start/end dates automatically via JS -->
+            <button data-range="today" class="active">Today</button>
+            <button data-range="yesterday">Yesterday</button>
+            <button data-range="this-week">This Week</button>
+            <button data-range="last-week">Last Week</button>
+            <button data-range="this-month">This Month</button>
+            <button data-range="last-month">Last Month</button>
+            <button data-range="all">All</button>
+        </div>
+        <div class="manage-buttons">
+            <button title="{{ t.all_records }} (scroll down)">{{ t.all_records }}</button>
+            {# Only show Manage Users link to admins. Non-admins should not see this navigation item. #}
+            {% if user.is_admin %}
+            <a href="{{ url_for('users_page') }}" class="manage-link">{{ t.manage_users }}</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Date range and grouping controls for historical data -->
+    <div class="range-controls">
+        <label for="range-start">Start:</label>
+        <input type="date" id="range-start" name="range-start">
+        <label for="range-end">End:</label>
+        <input type="date" id="range-end" name="range-end">
+        <label for="range-group">Group:</label>
+        <select id="range-group">
+            <option value="daily">Daily</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+        </select>
+        <button id="range-apply">Apply</button>
+    </div>
+
+    <section class="summary today-summary">
+        <div class="summary-header">
+            <span class="summary-label">Today ({{ today }})</span>
+        </div>
+        <div class="summary-cards">
+            <div class="card card-sales">
+                <h3>Sales</h3>
+                <p id="today-sales">0 SEK</p>
+            </div>
+            <div class="card card-expense">
+                <h3>Expenses</h3>
+                <p id="today-expenses">0 SEK</p>
+            </div>
+            <div class="card card-profit">
+                <h3>Profit</h3>
+                <p id="today-profit">0 SEK</p>
+            </div>
+            <div class="card card-orders">
+                <h3>Orders</h3>
+                <p id="today-orders">0</p>
+            </div>
+            <div class="card card-items">
+                <h3>Items</h3>
+                <p id="today-items">0</p>
+            </div>
+            <div class="card card-discount">
+                <h3>Discount</h3>
+                <p id="today-discount">0 SEK</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="summary total-summary">
+        <div class="summary-header">
+            <span class="summary-label">Totals</span>
+        </div>
+        <div class="summary-cards">
+            <div class="card card-sales">
+                <h3>Total Sales</h3>
+                <p id="total-sales">0 SEK</p>
+            </div>
+            <div class="card card-expense">
+                <h3>Total Expenses</h3>
+                <p id="total-expenses">0 SEK</p>
+            </div>
+            <div class="card card-profit">
+                <h3>Total Profit</h3>
+                <p id="total-profit">0 SEK</p>
+            </div>
+            <div class="card card-orders">
+                <h3>Total Orders</h3>
+                <p id="total-orders">0</p>
+            </div>
+            <div class="card card-items">
+                <h3>Total Items</h3>
+                <p id="total-items">0</p>
+            </div>
+            <div class="card card-discount">
+                <h3>Total Discount</h3>
+                <p id="total-discount">0 SEK</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Removed new-record section: manual entry no longer supported -->
+
+    <section class="records-section">
+        <h2>Records <span id="records-title-suffix">(last 50)</span></h2>
+        <table id="records-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- dynamically inserted rows -->
+            </tbody>
+        </table>
+    </section>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Expose current language from server to JavaScript so script can
+        // initialise correct translation.  The variable is set by Flask
+        // via template context.
+        window.appLanguage = "{{ lang }}";
+    </script>
+</body>
+</html>

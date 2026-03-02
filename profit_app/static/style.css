@@ -1,0 +1,323 @@
+/*
+ * Stylesheet for the ProfitApp dashboard
+ *
+ * The design draws inspiration from modern SaaS dashboards.  It uses
+ * neutral backgrounds with coloured accents on key cards.  Layouts
+ * adapt automatically thanks to flexbox and allow content to wrap on
+ * small screens.  Buttons and inputs are given sensible padding,
+ * rounded corners and subtle shadows.  All colours are chosen to
+ * remain accessible and to subtly echo the example provided by the user.
+ */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+}
+
+/* Header section with app branding and navigation */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px;
+    background: linear-gradient(90deg, #553c9a 0%, #b393d3 100%);
+    color: #fff;
+}
+.header-left {
+    max-width: 60%;
+}
+.app-title {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.tagline {
+    margin: 4px 0 12px 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+.user-info {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+.user-info .plan {
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 1px solid rgba(255,255,255,0.4);
+}
+.nav-buttons button,
+.nav-buttons a,
+.lang-buttons button,
+.account-buttons button,
+.account-buttons a {
+    margin-right: 6px;
+    margin-bottom: 6px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    transition: background 0.2s ease;
+}
+.nav-buttons button:hover,
+.lang-buttons button:hover,
+.account-buttons button:hover {
+    background: rgba(255,255,255,0.3);
+}
+.nav-buttons .api-button {
+    background: rgba(255,255,255,0.2);
+}
+.nav-buttons .pro-button {
+    background: #f6e05e;
+    color: #553c9a;
+}
+.nav-buttons .logout-button {
+    background: #fc8181;
+    color: #fff;
+}
+
+.account-buttons {
+    margin-top: 8px;
+}
+
+/* Controls row: export options, filters, management */
+.controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    margin: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    font-size: 14px;
+}
+.controls-row > div {
+    margin-bottom: 10px;
+}
+.controls-row button {
+    margin-right: 6px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #edf2f7;
+    color: #2d3748;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+.controls-row a.manage-link {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #edf2f7;
+    color: #2d3748;
+    text-decoration: none;
+    transition: background 0.2s ease;
+    font-size: 14px;
+}
+.controls-row a.manage-link:hover {
+    background: #e2e8f0;
+}
+.controls-row button.active,
+.controls-row button:hover {
+    background: #e2e8f0;
+}
+
+/* Summaries */
+.today-summary, .total-summary {
+    margin: 20px;
+}
+.today-date {
+    font-size: 18px;
+    color: #4a5568;
+    margin-bottom: 10px;
+}
+.summary-cards, .total-summary {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    flex: 1 1 200px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.card h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #4a5568;
+}
+.card p {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #2d3748;
+}
+.card-sales {
+    border-left: 4px solid #4299e1;
+}
+.card-expense {
+    border-left: 4px solid #f56565;
+}
+.card-profit {
+    border-left: 4px solid #48bb78;
+}
+
+/* Additional card styles for orders, items and discount */
+.card-orders {
+    border-left: 4px solid #ed8936;
+}
+.card-items {
+    border-left: 4px solid #9f7aea;
+}
+.card-discount {
+    border-left: 4px solid #ed64a6;
+}
+
+/* Summary section header */
+.summary-header {
+    font-size: 16px;
+    color: #4a5568;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+.summary-label {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+/* New record form */
+.new-record {
+    margin: 20px;
+    background: #fff;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.new-record h2 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #2d3748;
+}
+.new-record form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+.new-record label {
+    font-size: 14px;
+    margin-right: 4px;
+    color: #4a5568;
+}
+.new-record input[type="date"],
+.new-record input[type="number"],
+.new-record select {
+    padding: 6px 8px;
+    font-size: 14px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    min-width: 120px;
+}
+.new-record button[type="submit"] {
+    padding: 8px 16px;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    background: #48bb78;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+.new-record button[type="submit"]:hover {
+    background: #38a169;
+}
+
+/* Records table */
+.records-section {
+    margin: 20px;
+    background: #fff;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.records-section h2 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #2d3748;
+}
+.records-section table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.records-section th,
+.records-section td {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+    color: #4a5568;
+}
+.records-section th {
+    background: #f7fafc;
+    font-weight: 600;
+}
+.records-section tr:last-child td {
+    border-bottom: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .header-left {
+        max-width: 100%;
+    }
+    .controls-row {
+        flex-direction: column;
+    }
+    .summary-cards,
+    .total-summary {
+        flex-direction: column;
+    }
+    .card {
+        flex: none;
+    }
+}
+
+/* Back button in user management */
+.btn-back {
+    display: inline-block;
+    margin: 10px 0;
+    padding: 6px 12px;
+    background: #edf2f7;
+    color: #2d3748;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+}
+.btn-back:hover {
+    background: #e2e8f0;
+}

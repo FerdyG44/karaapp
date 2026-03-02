@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ t.manage_users }} – ProfitApp</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Additional styling for user management */
+        .users-container {
+            margin: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .users-container h1 {
+            margin-top: 0;
+        }
+        table.users-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.users-table th, table.users-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        table.users-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            text-align: left;
+        }
+        table.users-table tr:last-child td {
+            border-bottom: none;
+        }
+        .token-list {
+            font-size: 12px;
+            color: #718096;
+            margin: 4px 0;
+            word-break: break-all;
+        }
+        .form-inline {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .form-inline input, .form-inline select {
+            padding: 6px 8px;
+            font-size: 14px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+        }
+        .form-inline button {
+            padding: 8px 14px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            background: #553c9a;
+            color: #fff;
+            cursor: pointer;
+        }
+        .form-inline button:hover {
+            background: #6b46c1;
+        }
+    </style>
+</head>
+<body>
+    <div class="users-container">
+        <h1>{{ t.manage_users }}</h1>
+        <p>{{ t.logged_in_as }} {{ user.username }}.</p>
+        <a href="{{ url_for('index') }}" class="btn-back">← {{ t.back_to_dashboard }}</a>
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>{{ t.id }}</th>
+                    <th>{{ t.username }}</th>
+                    <th>{{ t.plan }}</th>
+                    <th>{{ t.expires_at_label }}</th>
+                    <th>{{ t.tokens }}</th>
+                    <th>{{ t.actions }}</th>
+                </tr>
+            </thead>
+            <tbody id="users-body">
+                {% for u in users %}
+                <tr data-id="{{ u.id }}">
+                    <td>{{ u.id }}</td>
+                    <td>{{ u.username }}</td>
+                    <td>
+                        {% if u.is_admin %}
+                            {{ u.plan }} (admin)
+                        {% else %}
+                            <select class="plan-select">
+                                <option value="Free" {% if u.plan == 'Free' %}selected{% endif %}>Free</option>
+                                <option value="Pro" {% if u.plan == 'Pro' %}selected{% endif %}>Pro</option>
+                            </select>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.expires_at %}
+                            {{ u.expires_at }}
+                        {% else %}
+                            ∞
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if tokens.get(u.id) %}
+                            <div class="token-list">{{ tokens[u.id]|join('<br/>')|safe }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not u.is_admin %}
+                        <button class="delete-btn">{{ t.delete }}</button>
+                        <button class="token-btn">{{ t.new_token }}</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <hr />
+        <h2>{{ t.add_user }}</h2>
+        <form id="add-user-form" class="form-inline">
+            <input type="text" id="new-username" placeholder="{{ t.username }}" required />
+            <input type="password" id="new-password" placeholder="{{ t.password }}" required />
+            <select id="new-plan">
+                <option value="Free">Free</option>
+                <option value="Pro">Pro</option>
+            </select>
+            <!-- Expiration date (optional) -->
+            <input type="date" id="new-expiry" placeholder="{{ t.expires_at_label }}" />
+            <button type="submit">{{ t.add }}</button>
+        </form>
+    </div>
+    <script>
+        // Helper to send JSON POST
+        async function postJSON(url, data) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (!res.ok || json.error) {
+                throw new Error(json.error || 'Request failed');
+            }
+            return json;
+        }
+
+        // Add user
+        document.getElementById('add-user-form').addEventListener('submit', async ev => {
+            ev.preventDefault();
+            const username = document.getElementById('new-username').value.trim();
+            const password = document.getElementById('new-password').value.trim();
+            const plan = document.getElementById('new-plan').value;
+            const expiry = document.getElementById('new-expiry').value.trim();
+            if (!username || !password) { alert('Enter username and password'); return; }
+            const payload = { username, password, plan };
+            if (expiry) {
+                payload.expires_at = expiry;
+            }
+            try {
+                await postJSON('{{ url_for('api_add_user') }}', payload);
+                window.location.reload();
+            } catch (err) {
+                alert('Error adding user: ' + err.message);
+            }
+        });
+
+        // Delete or change plan or generate token
+        document.getElementById('users-body').addEventListener('click', async ev => {
+            const tr = ev.target.closest('tr');
+            if (!tr) return;
+            const userId = tr.getAttribute('data-id');
+            if (ev.target.classList.contains('delete-btn')) {
+                if (!confirm('Delete this user?')) return;
+                try {
+                    await postJSON('{{ url_for('api_delete_user') }}', { user_id: userId });
+                    tr.remove();
+                } catch (err) { alert('Error: ' + err.message); }
+            }
+            if (ev.target.classList.contains('token-btn')) {
+                try {
+                    const json = await postJSON('{{ url_for('api_generate_token') }}', { user_id: userId });
+                    alert('New token: ' + json.token);
+                    window.location.reload();
+                } catch (err) { alert('Error: ' + err.message); }
+            }
+        });
+        // Change plan
+        document.querySelectorAll('.plan-select').forEach(sel => {
+            sel.addEventListener('change', async ev => {
+                const tr = ev.target.closest('tr');
+                const userId = tr.getAttribute('data-id');
+                const newPlan = ev.target.value;
+                try {
+                    await postJSON('{{ url_for('api_change_plan') }}', { user_id: userId, plan: newPlan });
+                } catch (err) { alert('Error: ' + err.message); }
+            });
+        });
+    </script>
+</body>
+</html>
